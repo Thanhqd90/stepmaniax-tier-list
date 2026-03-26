@@ -704,7 +704,7 @@ export function TierBoard({
 
         {/* Right/Bottom: collapsible charts sidebar */}
         {showChartsSidebar && (
-          <div className="w-full lg:w-80 h-32 md:h-40 lg:h-full bg-gray-800 lg:border-l-2 border-t-2 lg:border-t-0 border-gray-700 flex flex-col flex-shrink-0 overflow-hidden">
+          <div className="w-full lg:w-80 h-48 md:h-56 lg:h-full bg-gray-800 lg:border-l-2 border-t-2 lg:border-t-0 border-gray-700 flex flex-col flex-shrink-0 overflow-hidden">
             <div className="p-2 md:p-4 border-b border-gray-700 flex-shrink-0">
               <h2 className="text-sm md:text-lg font-bold text-white">
                 Available Charts
