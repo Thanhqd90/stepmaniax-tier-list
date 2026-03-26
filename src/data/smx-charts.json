@@ -29081,5 +29081,401 @@
         "level": 19
       }
     ]
+  },
+  {
+    "id": "732",
+    "title": "Chemical Love",
+    "artist": "Kevin & Cherry",
+    "jacketUrl": "/images/jackets/smx/ChemicalLove.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "165",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 2
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 5
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 18
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 10
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 17
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 21
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 21
+      }
+    ]
+  },
+  {
+    "id": "733",
+    "title": "Street Level",
+    "artist": "NXSTY",
+    "jacketUrl": "/images/jackets/smx/StreetLevel.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "128",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 3
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 23
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 12
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 9
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 18
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 19
+      }
+    ]
+  },
+  {
+    "id": "734",
+    "title": "Stylewave",
+    "artist": "Waterflame",
+    "jacketUrl": "/images/jackets/smx/Stylewave.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "130",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 4
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 7
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 22
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 17
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 11
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 17
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 23
+      }
+    ]
+  },
+  {
+    "id": "735",
+    "title": "Knock!",
+    "artist": "VIZZEN",
+    "jacketUrl": "/images/jackets/smx/Knock.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "130",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 4
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 20
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 10
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 17
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 21
+      }
+    ]
+  },
+  {
+    "id": "736",
+    "title": "Lifted Me Up",
+    "artist": "CloudNone and Micah Martin",
+    "jacketUrl": "/images/jackets/smx/LiftedMeUp.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "132",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 3
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 5
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 12
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 12
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 12
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 18
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 19
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 21
+      }
+    ]
+  },
+  {
+    "id": "737",
+    "title": "On My Own",
+    "artist": "Nostalgix & ALRT",
+    "jacketUrl": "/images/jackets/smx/OnMyOwnNostalgix.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "136",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 3
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 23
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 17
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 11
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 19
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 22
+      }
+    ]
   }
 ]
