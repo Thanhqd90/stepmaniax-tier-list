@@ -8,6 +8,10 @@ import {
   EyeIcon,
   EyeSlashIcon,
   ArrowDownTrayIcon,
+  QuestionMarkCircleIcon,
+  SparklesIcon,
+  StarIcon,
+  PlusIcon,
 } from "@heroicons/react/24/solid";
 import type {
   ChartRecord,
@@ -18,6 +22,9 @@ import type {
 import { createDefaultTiers, generateRowId } from "@/lib/utils";
 import { TierRowComponent } from "./TierRow";
 import { ChartCard } from "./ChartCard";
+import { HelpModal } from "./HelpModal";
+
+const MINIMUM_CHARTS_TO_EXPORT = 5;
 
 interface TierBoardProps {
   charts: ChartRecord[];
@@ -72,6 +79,16 @@ export function TierBoard({
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [tierListName, setTierListName] = useState<string>("");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
+  const [selectedChartRowId, setSelectedChartRowId] = useState<string | null>(
+    null,
+  );
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [lastExportTime, setLastExportTime] = useState(0);
+  const [exportCount, setExportCount] = useState(0);
+  const [showExportWarning, setShowExportWarning] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const tierRowsRef = useRef<HTMLDivElement>(null);
 
   // Mark as client-side mounted to avoid hydration issues
@@ -127,6 +144,29 @@ export function TierBoard({
     localStorage.setItem(storageKey, JSON.stringify(stateWithName));
   }, [state, tierListName, difficulty, level, isClient]);
 
+  // Reset export count when switching tiers (per-level session tracking)
+  useEffect(() => {
+    setExportCount(0);
+    setLastExportTime(0);
+  }, [difficulty, level]);
+
+  // Check if current tier is favorited
+  useEffect(() => {
+    if (!isClient || !difficulty || level === undefined) return;
+
+    try {
+      const favorites = JSON.parse(
+        localStorage.getItem("tierlist-favorites") || "[]",
+      ) as Array<{ difficulty: string; level: number }>;
+      const isFav = favorites.some(
+        (f) => f.difficulty === difficulty && f.level === level,
+      );
+      setIsFavorited(isFav);
+    } catch {
+      setIsFavorited(false);
+    }
+  }, [isClient, difficulty, level]);
+
   const handleStateChange = useCallback(
     (newState: TierListState) => {
       setState(newState);
@@ -134,6 +174,86 @@ export function TierBoard({
     },
     [onStateChange],
   );
+
+  // Handle chart click to select/move between rows
+  const handleChartClickInRow = (chart: ChartRecord, rowId: string) => {
+    if (selectedChartId === chart.id && selectedChartRowId === rowId) {
+      // Deselect if clicking same chart
+      setSelectedChartId(null);
+      setSelectedChartRowId(null);
+    } else if (selectedChartId && selectedChartRowId === rowId) {
+      // Swap positions if clicking another chart in the same row
+      const selectedPlacement = state.placements.find(
+        (p) => p.chartId === selectedChartId,
+      );
+      const clickedPlacement = state.placements.find(
+        (p) => p.chartId === chart.id,
+      );
+
+      if (selectedPlacement && clickedPlacement) {
+        const newPlacements = state.placements.map((p) => {
+          if (p.chartId === selectedChartId) {
+            return { ...p, xValue: clickedPlacement.xValue };
+          } else if (p.chartId === chart.id) {
+            return { ...p, xValue: selectedPlacement.xValue };
+          }
+          return p;
+        });
+        setState({ ...state, placements: newPlacements });
+        setSelectedChartId(null);
+        setSelectedChartRowId(null);
+        setActiveRowId(rowId);
+      }
+    } else if (selectedChartId) {
+      // Move selected chart to this row
+      const newPlacements = state.placements
+        .filter((p) => p.chartId !== selectedChartId)
+        .concat({
+          chartId: selectedChartId,
+          rowId: rowId,
+          xValue: state.placements.filter((p) => p.rowId === rowId).length,
+        });
+      setState({ ...state, placements: newPlacements });
+      setSelectedChartId(null);
+      setSelectedChartRowId(null);
+      setActiveRowId(rowId);
+    } else {
+      // Select this chart
+      setSelectedChartId(chart.id);
+      setSelectedChartRowId(rowId);
+    }
+  };
+
+  // Handle moving selected chart to a row when clicking empty space
+  const handleMoveChartToRow = (rowId: string) => {
+    if (selectedChartId) {
+      // If same row, move to end; if different row, add to end
+      const newPlacements = state.placements
+        .filter((p) => p.chartId !== selectedChartId)
+        .concat({
+          chartId: selectedChartId,
+          rowId: rowId,
+          xValue:
+            state.placements.filter((p) => p.rowId === rowId).length -
+            (selectedChartRowId === rowId ? 1 : 0),
+        });
+      setState({ ...state, placements: newPlacements });
+      setSelectedChartId(null);
+      setSelectedChartRowId(null);
+      setActiveRowId(rowId);
+    }
+  };
+
+  // Handle deselecting a chart
+  const handleDeselectChart = () => {
+    setSelectedChartId(null);
+    setSelectedChartRowId(null);
+  };
+
+  // Handle deactivating a row
+  const handleDeactivateRow = () => {
+    setActiveRowId(null);
+  };
 
   // Get placed chart IDs and unplaced charts
   const placedChartIds = new Set(state.placements.map((p) => p.chartId));
@@ -177,14 +297,83 @@ export function TierBoard({
     });
   };
 
+  // Randomly add all unplaced charts to rows
+  const handleRandomAddCharts = () => {
+    if (unplacedCharts.length === 0 || state.rows.length === 0) {
+      alert("Need both unplaced charts and at least one tier to add randomly.");
+      return;
+    }
+
+    const newPlacements = [...state.placements];
+
+    unplacedCharts.forEach((chart) => {
+      // Pick a random row
+      const randomRow =
+        state.rows[Math.floor(Math.random() * state.rows.length)];
+
+      // Get current charts in this row to calculate xValue
+      const rowChartCount = newPlacements.filter(
+        (p) => p.rowId === randomRow.id,
+      ).length;
+
+      // Add with random-ish xValue (based on position in row)
+      newPlacements.push({
+        chartId: chart.id,
+        rowId: randomRow.id,
+        xValue: rowChartCount * 100 + Math.random() * 50, // Spread them out
+      });
+    });
+
+    // Sort placements within each row by xValue
+    const sortedPlacements = newPlacements.sort((a, b) => {
+      if (a.rowId !== b.rowId) return 0;
+      return a.xValue - b.xValue;
+    });
+
+    handleStateChange({
+      ...state,
+      placements: sortedPlacements,
+    });
+  };
+
+  // Toggle favorite status for this tier
+  const handleToggleFavorite = () => {
+    if (!difficulty || level === undefined) return;
+
+    try {
+      const favorites = JSON.parse(
+        localStorage.getItem("tierlist-favorites") || "[]",
+      ) as Array<{ difficulty: string; level: number }>;
+
+      let updated: Array<{ difficulty: string; level: number }>;
+      if (isFavorited) {
+        updated = favorites.filter(
+          (f) => !(f.difficulty === difficulty && f.level === level),
+        );
+      } else {
+        updated = [...favorites, { difficulty, level }];
+      }
+
+      localStorage.setItem("tierlist-favorites", JSON.stringify(updated));
+      setIsFavorited(!isFavorited);
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+    }
+  };
+
   // Drag start
   const handleChartDragStart = (chart: ChartRecord) => {
     setDraggedChart(chart);
   };
 
-  // Chart click: add to active row
+  // Chart click: select it or add to active row
   const handleChartClick = (chart: ChartRecord) => {
-    if (!activeRowId) return; // Only works if a row is active
+    if (!activeRowId) {
+      // No active row: just select the chart
+      setSelectedChartId(chart.id);
+      setSelectedChartRowId(null);
+      return;
+    }
 
     // Remove chart from any previous row
     const newPlacements = state.placements.filter(
@@ -275,6 +464,25 @@ export function TierBoard({
 
   // Export tier board as image using Canvas API
   const handleExportAsImage = async () => {
+    // Throttle: prevent exports within 2 seconds
+    const now = Date.now();
+    if (now - lastExportTime < 2000) {
+      return; // Silently ignore rapid clicks
+    }
+
+    // Check if user has exported more than 3 times in this session
+    if (exportCount >= 3) {
+      const confirmed = window.confirm(
+        `You've exported ${exportCount} times this session. Continue anyway?`,
+      );
+      if (!confirmed) return;
+    }
+
+    // Disable button and show loading state
+    setIsExporting(true);
+    setLastExportTime(now);
+    setExportCount((prev) => prev + 1);
+
     try {
       const scale = 2; // High resolution scale (2x)
       const padding = 40;
@@ -440,17 +648,22 @@ export function TierBoard({
 
       // Download canvas as PNG
       canvas.toBlob((blob) => {
-        if (!blob) throw new Error("Could not create blob");
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `tierlist-${difficulty}-${level}-${Date.now()}.png`;
-        link.click();
-        URL.revokeObjectURL(url);
+        try {
+          if (!blob) throw new Error("Could not create blob");
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `tierlist-${difficulty}-${level}-${Date.now()}.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } finally {
+          setIsExporting(false);
+        }
       }, "image/png");
     } catch (error) {
       console.error("Failed to export image:", error);
       alert("Failed to export tier list as image. Please try again.");
+      setIsExporting(false);
     }
   };
 
@@ -564,7 +777,7 @@ export function TierBoard({
           <div className="hidden md:flex gap-2">
             <Link
               href="/"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
               title="Go to home"
             >
               <HomeIcon className="w-4 h-4" />
@@ -572,7 +785,7 @@ export function TierBoard({
             </Link>
             <button
               onClick={handleReset}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2"
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
               title="Reset tier list"
             >
               <ArrowPathIcon className="w-4 h-4" />
@@ -580,7 +793,7 @@ export function TierBoard({
             </button>
             <button
               onClick={() => setShowChartsSidebar(!showChartsSidebar)}
-              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2"
+              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
               title={showChartsSidebar ? "Hide charts" : "Show charts"}
             >
               {showChartsSidebar ? (
@@ -592,18 +805,53 @@ export function TierBoard({
             </button>
             <button
               onClick={handleExportAsImage}
-              className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2"
-              title="Export as image"
+              disabled={
+                isExporting ||
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+              }
+              className={`px-4 py-2 bg-orange-500 text-white rounded font-medium text-sm flex items-center gap-2 transition-all ${
+                isExporting ||
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:bg-orange-600 hover:scale-105 cursor-pointer"
+              }`}
+              title={
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+                  ? `Need at least ${MINIMUM_CHARTS_TO_EXPORT} charts to export`
+                  : isExporting
+                    ? "Exporting..."
+                    : "Export as image"
+              }
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
-              Export
+              {isExporting ? "Exporting..." : "Export"}
+            </button>
+            <button
+              onClick={handleToggleFavorite}
+              className={`px-4 py-2 rounded font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer ${
+                isFavorited
+                  ? "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
+                  : "bg-gray-600 text-white hover:bg-gray-700"
+              }`}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <StarIcon className="w-4 h-4" />
+              {isFavorited ? "Favorited" : "Favorite"}
+            </button>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+              title="Show help and instructions"
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" />
+              Help
             </button>
           </div>
 
           {/* Mobile menu button */}
           <button
             onClick={() => setShowHeaderMenu(!showHeaderMenu)}
-            className="md:hidden flex flex-col gap-1 p-2 hover:bg-gray-800 rounded"
+            className="md:hidden flex flex-col gap-1 p-2 hover:bg-gray-800 rounded cursor-pointer"
             aria-label="Menu"
           >
             <div className="w-6 h-1 bg-white rounded"></div>
@@ -617,7 +865,7 @@ export function TierBoard({
           <div className="md:hidden border-t border-gray-700 bg-gray-800 p-3 space-y-2">
             <Link
               href="/"
-              className="block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-medium text-sm text-center flex items-center justify-center gap-2"
+              className="block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 font-medium text-sm text-center flex items-center justify-center gap-2 cursor-pointer"
             >
               <HomeIcon className="w-4 h-4" />
               Home
@@ -627,7 +875,7 @@ export function TierBoard({
                 handleReset();
                 setShowHeaderMenu(false);
               }}
-              className="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 font-medium text-sm flex items-center justify-center gap-2"
+              className="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               <ArrowPathIcon className="w-4 h-4" />
               Reset
@@ -637,7 +885,7 @@ export function TierBoard({
                 setShowChartsSidebar(!showChartsSidebar);
                 setShowHeaderMenu(false);
               }}
-              className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 font-medium text-sm flex items-center justify-center gap-2"
+              className="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               {showChartsSidebar ? (
                 <EyeSlashIcon className="w-4 h-4" />
@@ -651,10 +899,50 @@ export function TierBoard({
                 handleExportAsImage();
                 setShowHeaderMenu(false);
               }}
-              className="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 font-medium text-sm flex items-center justify-center gap-2"
+              disabled={
+                isExporting ||
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+              }
+              className={`w-full px-4 py-2 bg-orange-500 text-white rounded font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                isExporting ||
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+                  ? "opacity-60 cursor-not-allowed"
+                  : "hover:bg-orange-600 cursor-pointer"
+              }`}
+              title={
+                state.placements.length < MINIMUM_CHARTS_TO_EXPORT
+                  ? `Need at least ${MINIMUM_CHARTS_TO_EXPORT} charts to export`
+                  : isExporting
+                    ? "Exporting..."
+                    : "Export as image"
+              }
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
-              Export as Image
+              {isExporting ? "Exporting..." : "Export as Image"}
+            </button>
+            <button
+              onClick={() => {
+                handleToggleFavorite();
+                setShowHeaderMenu(false);
+              }}
+              className={`w-full px-4 py-2 rounded font-medium text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                isFavorited
+                  ? "bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                  : "bg-gray-600 hover:bg-gray-700 text-white"
+              }`}
+            >
+              <StarIcon className="w-4 h-4" />
+              {isFavorited ? "Favorited" : "Favorite"}
+            </button>
+            <button
+              onClick={() => {
+                setShowHelpModal(true);
+                setShowHeaderMenu(false);
+              }}
+              className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" />
+              Help
             </button>
           </div>
         )}
@@ -667,6 +955,17 @@ export function TierBoard({
           <div
             ref={tierRowsRef}
             className="max-w-5xl mx-auto p-3 md:p-6 space-y-3 md:space-y-6"
+            onClick={(e) => {
+              // Only deselect if clicking directly on this container (empty space)
+              if (e.target === e.currentTarget) {
+                if (selectedChartId) {
+                  handleDeselectChart();
+                }
+                if (activeRowId) {
+                  handleDeactivateRow();
+                }
+              }
+            }}
           >
             {/* Tier Rows */}
             <div className="space-y-2 md:space-y-4">
@@ -692,8 +991,14 @@ export function TierBoard({
                       onDeleteRow={handleRemoveRow}
                       onUpdateRow={handleUpdateRow}
                       onChartDragStart={handleChartDragStart}
+                      onChartClick={handleChartClickInRow}
+                      onMoveChartToRow={handleMoveChartToRow}
+                      selectedChartId={selectedChartId}
+                      selectedChartRowId={selectedChartRowId}
                       isActive={activeRowId === row.id}
                       onActivate={() => setActiveRowId(row.id)}
+                      onDeactivate={handleDeactivateRow}
+                      onDeselect={handleDeselectChart}
                     />
                   </div>
                 ))
@@ -706,12 +1011,26 @@ export function TierBoard({
         {showChartsSidebar && (
           <div className="w-full lg:w-80 h-48 md:h-56 lg:h-full bg-gray-800 lg:border-l-2 border-t-2 lg:border-t-0 border-gray-700 flex flex-col flex-shrink-0 overflow-hidden">
             <div className="p-2 md:p-4 border-b border-gray-700 flex-shrink-0">
-              <h2 className="text-sm md:text-lg font-bold text-white">
-                Available Charts
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {unplacedCharts.length} unplaced
-              </p>
+              <div className="flex justify-between items-start gap-2 mb-2">
+                <div>
+                  <h2 className="text-sm md:text-lg font-bold text-white">
+                    Available Charts
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {unplacedCharts.length} unplaced
+                  </p>
+                </div>
+                {unplacedCharts.length > 0 && state.rows.length > 0 && (
+                  <button
+                    onClick={handleRandomAddCharts}
+                    className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors flex items-center gap-1 flex-shrink-0 text-xs md:text-sm font-medium"
+                    title="Add all unplaced charts to random tiers"
+                  >
+                    <PlusIcon className="w-3 h-3 md:w-4 md:h-4" />
+                    Add All
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2 md:p-4">
               {unplacedCharts.length === 0 ? (
@@ -719,13 +1038,26 @@ export function TierBoard({
                   All charts are placed in tiers!
                 </p>
               ) : (
-                <div className="grid grid-cols-5 md:grid-cols-2 gap-1 md:gap-3">
+                <div
+                  className="grid grid-cols-5 md:grid-cols-2 gap-1 md:gap-3"
+                  onClick={(e) => {
+                    // Only deselect if clicking directly on grid (empty space)
+                    if (e.target === e.currentTarget && selectedChartId) {
+                      setSelectedChartId(null);
+                      setSelectedChartRowId(null);
+                    }
+                  }}
+                >
                   {unplacedCharts.map((chart) => (
                     <div
                       key={chart.id}
                       onDragStart={() => handleChartDragStart(chart)}
                       onClick={() => handleChartClick(chart)}
-                      className="w-full aspect-square"
+                      className={`w-full aspect-square cursor-pointer transition-all ${
+                        selectedChartId === chart.id
+                          ? "ring-2 ring-yellow-400"
+                          : ""
+                      }`}
                     >
                       <ChartCard
                         chart={chart}
@@ -740,6 +1072,12 @@ export function TierBoard({
           </div>
         )}
       </div>
+
+      {/* Help Modal */}
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
     </div>
   );
 }
