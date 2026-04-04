@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StepManiaX Tier List",
+  title: "StepManiaX Tierlist Maker",
   description: "Create custom tier lists for StepManiaX charts",
 };
 
