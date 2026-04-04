@@ -70,6 +70,7 @@ export interface TierListVariant extends TierListState {
   displayName: string; // Base name (e.g., "Difficulty", "Skillset", custom name)
   customLabel?: string; // Optional user annotation (e.g., "By username")
   editable: boolean; // Whether rows can be edited (true for all types now)
+  chartRatings?: Record<string, number>; // Map of chartId to star rating (0-7), undefined means unrated
 }
 
 export interface FilterState {

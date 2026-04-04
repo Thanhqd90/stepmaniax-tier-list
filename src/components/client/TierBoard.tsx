@@ -498,7 +498,7 @@ export function TierBoard({
   // Reset tier list based on current variant type
   const handleReset = () => {
     if (confirm("Are you sure you want to reset this tier list?")) {
-      let newRows = [];
+      let newRows: TierRow[] = [];
       let newPlacements: Placement[] = [];
 
       if (currentVariant?.type === "decimal") {
