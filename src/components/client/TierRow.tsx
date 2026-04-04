@@ -2,7 +2,15 @@
 
 import type { ChartRecord, Placement, TierRow } from "@/types/smx";
 import { ChartCard } from "./ChartCard";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import {
+  EllipsisVerticalIcon,
+  TrashIcon,
+  PlusIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/solid";
 
 interface TierRowProps {
   row: TierRow;
@@ -12,6 +20,10 @@ interface TierRowProps {
   onReorderCharts: (chartIds: string[]) => void;
   onDeleteRow: (rowId: string) => void;
   onUpdateRow: (rowId: string, updates: Partial<TierRow>) => void;
+  onAddRowAbove?: (rowId: string) => void;
+  onAddRowBelow?: (rowId: string) => void;
+  onMoveRowUp?: (rowId: string) => void;
+  onMoveRowDown?: (rowId: string) => void;
   onChartDragStart?: (chart: ChartRecord) => void;
   onChartClick?: (chart: ChartRecord, rowId: string) => void;
   onMoveChartToRow?: (rowId: string) => void;
@@ -21,6 +33,15 @@ interface TierRowProps {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onDeselect?: () => void;
+  totalRows?: number;
+  maxRows?: number;
+  isDraggingRow?: boolean;
+  isDragOverRow?: boolean;
+  dropPosition?: "above" | "below" | null;
+  onRowDragStart?: (rowId: string) => void;
+  onRowDragOver?: (rowId: string, e: React.DragEvent<HTMLDivElement>) => void;
+  onRowDragLeave?: () => void;
+  onRowDrop?: (rowId: string) => void;
 }
 
 /**
@@ -34,6 +55,10 @@ export function TierRowComponent({
   onReorderCharts,
   onDeleteRow,
   onUpdateRow,
+  onAddRowAbove,
+  onAddRowBelow,
+  onMoveRowUp,
+  onMoveRowDown,
   onChartDragStart,
   onChartClick,
   onMoveChartToRow,
@@ -43,7 +68,60 @@ export function TierRowComponent({
   onActivate,
   onDeactivate,
   onDeselect,
+  totalRows = 0,
+  maxRows = 12,
+  isDraggingRow = false,
+  isDragOverRow = false,
+  dropPosition = null,
+  onRowDragStart,
+  onRowDragOver,
+  onRowDragLeave,
+  onRowDrop,
 }: TierRowProps) {
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState(row.name);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Check if we can add more rows
+  const canAddRow = totalRows < maxRows;
+
+  // Generate random color
+  const generateRandomColor = () => {
+    const colors = [
+      "#FF6B6B", // Red
+      "#FF8A7F", // Orange-Red
+      "#FFA07A", // Light Salmon
+      "#FFB68F", // Peach
+      "#FFCCA3", // Light Orange
+      "#FFE2B8", // Lighter Orange
+      "#FFF0D0", // Very Light Orange
+      "#4ECDC4", // Teal
+      "#45B7D1", // Sky Blue
+      "#96CEB4", // Sage Green
+      "#FFEAA7", // Yellow
+      "#DFE6E9", // Light Gray
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMenu]);
   // Get charts in this row, sorted by xValue
   const rowCharts = placements
     .filter((p) => p.rowId === row.id)
@@ -52,95 +130,360 @@ export function TierRowComponent({
     .filter(Boolean) as ChartRecord[];
 
   return (
-    <div
-      onClick={() => {
-        // If a chart is selected, deselect it when clicking on the row
-        if (selectedChartId) {
-          onDeselect?.();
-        } else if (isActive) {
-          // If row is already active, deactivate it
-          onDeactivate?.();
-        } else {
-          // Otherwise activate the row
-          onActivate?.();
+    <>
+      <style>{`
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
-      }}
-      className={`flex gap-2 md:gap-4 p-2 md:p-4 rounded-lg border-2 mb-2 md:mb-4 cursor-pointer transition-all
-        ${isActive ? "ring-2 ring-blue-500 ring-offset-2 shadow-lg" : ""}
-      `}
-      style={{ borderColor: row.color, backgroundColor: `${row.color}15` }}
-    >
-      {/* Row Number Label - Centered */}
-      <div className="flex items-center justify-center flex-shrink-0 min-w-12 md:min-w-16">
-        <p
-          className="text-sm md:text-lg font-bold text-center text-gray-100"
-          style={{ color: row.color }}
-        >
-          {row.name}
-        </p>
-      </div>
-
-      {/* Charts Grid */}
+        @keyframes slideOutDown {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+        }
+      `}</style>
       <div
-        className="flex-1"
-        onClick={(e) => {
+        draggable
+        onDragStart={() => onRowDragStart?.(row.id)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          onRowDragOver?.(row.id, e);
+        }}
+        onDragLeave={() => onRowDragLeave?.()}
+        onDrop={(e) => {
+          e.preventDefault();
+          onRowDrop?.(row.id);
+        }}
+        onClick={() => {
+          // If a chart is selected, deselect it when clicking on the row
           if (selectedChartId) {
-            e.stopPropagation();
-            if (selectedChartRowId === row.id) {
-              // Deselect if clicking empty space in same row as selected chart
-              onDeselect?.();
-            } else {
-              // Move to different row
-              onMoveChartToRow?.(row.id);
-            }
+            onDeselect?.();
+          } else if (isActive) {
+            // If row is already active, deactivate it
+            onDeactivate?.();
+          } else {
+            // Otherwise activate the row
+            onActivate?.();
           }
         }}
+        className={`flex gap-2 md:gap-4 p-2 md:p-4 rounded-lg border-2 mb-2 md:mb-4 cursor-move transition-all relative
+        ${isActive ? "ring-2 ring-blue-500 ring-offset-2 shadow-lg" : ""}
+        ${isDraggingRow ? "opacity-50" : ""}
+        ${isDragOverRow ? "ring-2 ring-yellow-400 ring-offset-2" : ""}
+      `}
+        style={{
+          borderColor: row.color,
+          backgroundColor: `${row.color}15`,
+          animation: isDeleting
+            ? "slideOutDown 0.3s ease-out forwards"
+            : "slideInUp 0.3s ease-out",
+        }}
       >
-        {rowCharts.length === 0 ? (
-          <div className="flex items-center justify-center h-16 md:h-24 bg-gray-800 rounded border-2 border-dashed border-gray-700">
-            <p className="text-gray-400 text-xs md:text-sm font-medium">
-              {selectedChartId && isActive
-                ? "Tap to move chart here"
-                : "There are no charts in this row"}
+        {/* Insertion line indicator */}
+        {isDragOverRow && (
+          <>
+            {dropPosition === "above" && (
+              <div className="absolute top-0 left-0 right-0 flex items-center justify-center z-10">
+                <div className="h-0.5 bg-blue-500 flex-1" />
+                <span className="px-2 text-xs font-bold text-blue-500 bg-gray-900 rounded">
+                  ↑ INSERT ABOVE
+                </span>
+                <div className="h-0.5 bg-blue-500 flex-1" />
+              </div>
+            )}
+            {dropPosition === "below" && (
+              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center z-10">
+                <div className="h-0.5 bg-green-500 flex-1" />
+                <span className="px-2 text-xs font-bold text-green-500 bg-gray-900 rounded">
+                  ↓ INSERT BELOW
+                </span>
+                <div className="h-0.5 bg-green-500 flex-1" />
+              </div>
+            )}
+          </>
+        )}
+        {/* Row Number Label - Centered */}
+        <div className="flex items-center justify-center flex-shrink-0 flex-col gap-1 relative">
+          {isEditingName ? (
+            <input
+              autoFocus
+              type="text"
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onUpdateRow(row.id, { name: editingName });
+                  setIsEditingName(false);
+                }
+                if (e.key === "Escape") {
+                  setEditingName(row.name);
+                  setIsEditingName(false);
+                }
+              }}
+              onBlur={() => {
+                onUpdateRow(row.id, { name: editingName });
+                setIsEditingName(false);
+              }}
+              className="px-1 py-0.5 bg-gray-700 text-white text-xs md:text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none min-w-12"
+            />
+          ) : (
+            <p
+              className="text-sm md:text-lg font-bold text-center text-gray-100 cursor-pointer hover:text-gray-200"
+              onClick={() => {
+                setEditingName(row.name);
+                setIsEditingName(true);
+              }}
+              style={{ color: row.color }}
+            >
+              {row.name}
             </p>
+          )}
+
+          {/* Row edit menu */}
+          <div className="flex gap-1 items-center relative" ref={menuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-1 hover:bg-gray-700 rounded inline-flex items-center justify-center transition-colors"
+              title="Row menu"
+            >
+              <EllipsisVerticalIcon className="w-4 h-4 text-gray-400" />
+            </button>
+
+            {showMenu && (
+              <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 border border-gray-600 rounded shadow-lg min-w-max">
+                {/* Color picker */}
+                {showColorPicker ? (
+                  <>
+                    <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
+                      Select Row Color
+                    </div>
+                    <div className="px-3 py-3">
+                      <input
+                        type="color"
+                        value={row.color}
+                        onChange={(e) => {
+                          onUpdateRow(row.id, { color: e.target.value });
+                        }}
+                        className="w-full h-12 rounded cursor-pointer"
+                        autoFocus
+                      />
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowColorPicker(false);
+                      }}
+                      className="w-full px-3 py-1.5 text-left text-xs text-gray-400 hover:text-gray-300 hover:bg-gray-700 transition-colors border-t border-gray-700"
+                    >
+                      ← Back to Menu
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Rename option */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingName(row.name);
+                        setIsEditingName(true);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                    >
+                      <span className="text-gray-400">✏️</span>
+                      Rename Row
+                    </button>
+
+                    {/* Color section */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowColorPicker(true);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                    >
+                      <div
+                        className="w-3 h-3 rounded border border-gray-600"
+                        style={{ backgroundColor: row.color }}
+                      />
+                      Choose Color
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newColor = generateRandomColor();
+                        onUpdateRow(row.id, { color: newColor });
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                    >
+                      <SparklesIcon className="w-3 h-3 text-yellow-400" />
+                      Random Color
+                    </button>
+
+                    {/* Add rows section */}
+                    {canAddRow && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddRowAbove?.(row.id);
+                            setShowMenu(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                        >
+                          <ChevronUpIcon className="w-3 h-3 text-gray-400" />
+                          Add Row Above
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddRowBelow?.(row.id);
+                            setShowMenu(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                        >
+                          <ChevronDownIcon className="w-3 h-3 text-gray-400" />
+                          Add Row Below
+                        </button>
+                      </>
+                    )}
+
+                    {/* Max rows warning */}
+                    {!canAddRow && (
+                      <div className="w-full px-3 py-2 text-xs text-red-400 bg-red-950 bg-opacity-40 border-b border-red-900 flex items-center gap-2">
+                        ⚠️ Maximum {maxRows} rows reached
+                      </div>
+                    )}
+
+                    {/* Move rows section */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveRowUp?.(row.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                    >
+                      <ChevronUpIcon className="w-3 h-3 text-blue-400" />
+                      Move Up
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveRowDown?.(row.id);
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
+                    >
+                      <ChevronDownIcon className="w-3 h-3 text-blue-400" />
+                      Move Down
+                    </button>
+
+                    {/* Delete section */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Delete "${row.name}" row?`)) {
+                          setIsDeleting(true);
+                          // Wait for animation to complete before actually deleting
+                          setTimeout(() => {
+                            onDeleteRow(row.id);
+                          }, 300);
+                        }
+                        setShowMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-red-900 transition-colors flex items-center gap-2 text-red-400"
+                    >
+                      <TrashIcon className="w-3 h-3" />
+                      Delete Row
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-wrap gap-1 md:gap-2">
-            {rowCharts.map((chart) => {
-              const isSelected = selectedChartId === chart.id;
-              return (
-                <div
-                  key={chart.id}
-                  className={`relative group w-16 md:w-20 cursor-pointer transition-all ${
-                    isSelected ? "ring-2 ring-yellow-400" : ""
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onChartClick?.(chart, row.id);
-                  }}
-                  onDragStart={() => onChartDragStart?.(chart)}
-                >
-                  <ChartCard chart={chart} compact={true} />
-                  <button
+        </div>
+
+        {/* Charts Grid */}
+        <div
+          className="flex-1"
+          onClick={(e) => {
+            if (selectedChartId) {
+              e.stopPropagation();
+              if (selectedChartRowId === row.id) {
+                // Deselect if clicking empty space in same row as selected chart
+                onDeselect?.();
+              } else {
+                // Move to different row
+                onMoveChartToRow?.(row.id);
+              }
+            }
+          }}
+        >
+          {rowCharts.length === 0 ? (
+            <div className="flex items-center justify-center h-16 md:h-24 bg-gray-800 rounded border-2 border-dashed border-gray-700">
+              <p className="text-gray-400 text-xs md:text-sm font-medium">
+                {selectedChartId && isActive
+                  ? "Tap to move chart here"
+                  : "There are no charts in this row"}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1 md:gap-2">
+              {rowCharts.map((chart) => {
+                const isSelected = selectedChartId === chart.id;
+                return (
+                  <div
+                    key={chart.id}
+                    className={`relative group w-16 md:w-20 cursor-pointer transition-all ${
+                      isSelected ? "ring-2 ring-yellow-400" : ""
+                    }`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRemoveChart(chart.id);
+                      onChartClick?.(chart, row.id);
                     }}
-                    className="
+                    onDragStart={() => onChartDragStart?.(chart)}
+                  >
+                    <ChartCard chart={chart} compact={true} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveChart(chart.id);
+                      }}
+                      className="
                       absolute top-0.5 md:top-1 right-0.5 md:right-1 bg-red-500 text-white
                       rounded-full w-5 md:w-6 h-5 md:h-6 flex items-center justify-center
                       opacity-0 group-hover:opacity-100 transition-opacity
                       text-xs font-bold hover:bg-red-600 z-10
                     "
-                  >
-                    ×
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

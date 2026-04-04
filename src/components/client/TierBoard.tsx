@@ -12,19 +12,36 @@ import {
   SparklesIcon,
   StarIcon,
   PlusIcon,
+  ArrowUpTrayIcon,
+  EllipsisVerticalIcon,
+  TrashIcon,
 } from "@heroicons/react/24/solid";
 import type {
   ChartRecord,
   Placement,
   TierListState,
   TierRow,
+  TierListVariant,
 } from "@/types/smx";
-import { createDefaultTiers, generateRowId } from "@/lib/utils";
+import {
+  createDefaultTiers,
+  generateRowId,
+  exportTierListAsJSON,
+  importTierListFromJSON,
+  loadTierListVariants,
+  saveTierListVariants,
+  getLastViewedVariantId,
+  saveLastViewedVariantId,
+  createCustomTierListVariant,
+  createCategoryTierListVariant,
+  createDecimalTierListVariant,
+} from "@/lib/utils";
 import { TierRowComponent } from "./TierRow";
 import { ChartCard } from "./ChartCard";
 import { HelpModal } from "./HelpModal";
 
 const MINIMUM_CHARTS_TO_EXPORT = 5;
+const MAX_ROWS = 12;
 
 interface TierBoardProps {
   charts: ChartRecord[];
@@ -46,36 +63,29 @@ export function TierBoard({
   difficulty,
   level,
 }: TierBoardProps) {
-  // Initialize with default tiers if no rows exist
-  const getInitialState = () => {
-    // Try to load from localStorage first
-    if (typeof window !== "undefined") {
-      const storageKey = `tierlist-${difficulty}-${level}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          return JSON.parse(saved) as TierListState;
-        } catch {
-          // If parsing fails, fall through to default
-        }
-      }
-    }
+  // Manage multiple tier list variants
+  const [variants, setVariants] = useState<TierListVariant[]>([]);
+  const [currentVariantId, setCurrentVariantId] = useState<string>("decimal");
+  const [isClient, setIsClient] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [customTierListName, setCustomTierListName] = useState("");
 
-    if (initialState.rows.length === 0) {
-      return {
-        rows: createDefaultTiers(level),
-        placements: initialState.placements,
-      };
-    }
-    return initialState;
-  };
+  // Get current variant
+  const currentVariant = variants.find((v) => v.id === currentVariantId);
+  const state: TierListState = currentVariant
+    ? { rows: currentVariant.rows, placements: currentVariant.placements }
+    : { rows: [], placements: [] };
 
-  const [state, setState] = useState<TierListState>(getInitialState);
+  // State for UI interactions
   const [draggedChart, setDraggedChart] = useState<ChartRecord | null>(null);
   const [draggedFromRowId, setDraggedFromRowId] = useState<string | null>(null);
+  const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
+  const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<"above" | "below" | null>(
+    null,
+  );
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [showChartsSidebar, setShowChartsSidebar] = useState(true);
-  const [isClient, setIsClient] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [tierListName, setTierListName] = useState<string>("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -89,29 +99,237 @@ export function TierBoard({
   const [exportCount, setExportCount] = useState(0);
   const [showExportWarning, setShowExportWarning] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const tierRowsRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  // Mark as client-side mounted to avoid hydration issues
+  // Initialize on mount - load all variants for this level
   useEffect(() => {
+    if (!difficulty || level === undefined) return;
     setIsClient(true);
-  }, []);
 
-  // Load name and save recently visited on mount
+    const loaded = loadTierListVariants(difficulty, level);
+    setVariants(loaded);
+
+    // Restore last viewed variant
+    const lastViewedId = getLastViewedVariantId(difficulty, level);
+    if (lastViewedId && loaded.some((v) => v.id === lastViewedId)) {
+      setCurrentVariantId(lastViewedId);
+    } else {
+      setCurrentVariantId("decimal");
+    }
+  }, [difficulty, level]);
+
+  // Update tier list name when current variant changes
+  useEffect(() => {
+    if (currentVariant) {
+      setTierListName(currentVariant.customLabel || "");
+    }
+  }, [currentVariantId]);
+
+  // Save variants to localStorage whenever they change
+  useEffect(() => {
+    if (
+      !isClient ||
+      !difficulty ||
+      level === undefined ||
+      variants.length === 0
+    )
+      return;
+    saveTierListVariants(difficulty, level, variants);
+  }, [variants, difficulty, level, isClient]);
+
+  // Handle state changes for the current variant
+  const handleStateChange = (newState: TierListState) => {
+    if (!currentVariant) return;
+
+    const updated = variants.map((v) =>
+      v.id === currentVariantId ? { ...v, ...newState } : v,
+    );
+    setVariants(updated);
+    onStateChange?.(newState);
+  };
+
+  // Switch to a different tier list variant
+  const handleSwitchVariant = (variantId: string) => {
+    if (difficulty && level !== undefined) {
+      saveLastViewedVariantId(difficulty, level, variantId);
+    }
+    setCurrentVariantId(variantId);
+  };
+
+  // Create a new custom tier list
+  const handleCreateCustom = () => {
+    if (!customTierListName.trim()) return;
+
+    const newVariant = createCustomTierListVariant(customTierListName);
+    const updated = [...variants, newVariant];
+    setVariants(updated);
+    setCurrentVariantId(newVariant.id);
+    setCustomTierListName("");
+    setShowCreateDialog(false);
+  };
+
+  // Count custom tier lists
+  const customTierListCount = variants.filter(
+    (v) => v.type === "custom",
+  ).length;
+  const canCreateCustom = customTierListCount < 1;
+
+  // Delete a tier list variant (only custom ones)
+  const handleDeleteVariant = (variantId: string) => {
+    if (variantId === "decimal" || variantId === "category") return; // Protect defaults
+
+    const filtered = variants.filter((v) => v.id !== variantId);
+    setVariants(filtered);
+
+    // Switch to decimal if deleting current
+    if (variantId === currentVariantId) {
+      handleSwitchVariant("decimal");
+    }
+  };
+
+  // Update a row (name or color)
+  const handleUpdateRow = (rowId: string, updates: Partial<TierRow>) => {
+    if (!currentVariant) return;
+
+    handleStateChange({
+      ...state,
+      rows: state.rows.map((r) => (r.id === rowId ? { ...r, ...updates } : r)),
+    });
+  };
+
+  // Add a new row
+  const handleAddRow = (position: "above" | "below", targetRowId?: string) => {
+    // Check if we can add more rows
+    if (state.rows.length >= MAX_ROWS) {
+      alert(`Maximum ${MAX_ROWS} rows reached. You cannot add more rows.`);
+      return;
+    }
+
+    if (!currentVariant) return;
+
+    const newRow: TierRow = {
+      id: generateRowId(),
+      name: "New Tier",
+      color: "#CCCCCC",
+    };
+
+    if (!targetRowId) {
+      // Add to end
+      handleStateChange({ ...state, rows: [...state.rows, newRow] });
+    } else {
+      const targetIndex = state.rows.findIndex((r) => r.id === targetRowId);
+      if (targetIndex === -1) return;
+
+      const newRows = [...state.rows];
+      const insertIndex = position === "above" ? targetIndex : targetIndex + 1;
+      newRows.splice(insertIndex, 0, newRow);
+      handleStateChange({ ...state, rows: newRows });
+    }
+  };
+
+  // Move row up
+  const handleMoveRowUp = (rowId: string) => {
+    const rowIndex = state.rows.findIndex((r) => r.id === rowId);
+    if (rowIndex <= 0) return;
+
+    const newRows = [...state.rows];
+    [newRows[rowIndex], newRows[rowIndex - 1]] = [
+      newRows[rowIndex - 1],
+      newRows[rowIndex],
+    ];
+    handleStateChange({ ...state, rows: newRows });
+  };
+
+  // Move row down
+  const handleMoveRowDown = (rowId: string) => {
+    const rowIndex = state.rows.findIndex((r) => r.id === rowId);
+    if (rowIndex >= state.rows.length - 1) return;
+
+    const newRows = [...state.rows];
+    [newRows[rowIndex], newRows[rowIndex + 1]] = [
+      newRows[rowIndex + 1],
+      newRows[rowIndex],
+    ];
+    handleStateChange({ ...state, rows: newRows });
+  };
+
+  // Reorder rows
+  const handleReorderRows = (reorderedRows: TierRow[]) => {
+    handleStateChange({ ...state, rows: reorderedRows });
+  };
+
+  // Row drag-and-drop handlers
+  const handleRowDragStart = (rowId: string) => {
+    setDraggedRowId(rowId);
+  };
+
+  const handleRowDragOver = (
+    rowId: string,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
+    e.preventDefault();
+    setDragOverRowId(rowId);
+
+    // Determine if dropping above or below based on vertical position
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+    const position = e.clientY < midpoint ? "above" : "below";
+    setDropPosition(position);
+  };
+
+  const handleRowDragLeave = () => {
+    setDragOverRowId(null);
+    setDropPosition(null);
+  };
+
+  const handleRowDrop = (targetRowId: string) => {
+    if (!draggedRowId || draggedRowId === targetRowId) {
+      setDraggedRowId(null);
+      setDragOverRowId(null);
+      setDropPosition(null);
+      return;
+    }
+
+    const draggedIndex = state.rows.findIndex((r) => r.id === draggedRowId);
+    const targetIndex = state.rows.findIndex((r) => r.id === targetRowId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedRowId(null);
+      setDragOverRowId(null);
+      setDropPosition(null);
+      return;
+    }
+
+    const newRows = [...state.rows];
+    const [draggedRow] = newRows.splice(draggedIndex, 1);
+
+    // Calculate the correct insert position after removal
+    // If dragged from above target, target index shifts down by 1
+    let insertIndex = targetIndex;
+    if (draggedIndex < targetIndex) {
+      insertIndex = targetIndex - 1;
+    }
+
+    // Adjust for above/below
+    if (dropPosition === "below") {
+      insertIndex += 1;
+    }
+
+    newRows.splice(insertIndex, 0, draggedRow);
+
+    handleStateChange({ ...state, rows: newRows });
+    setDraggedRowId(null);
+    setDragOverRowId(null);
+    setDropPosition(null);
+  };
+
+  // Track recently visited on mount
   useEffect(() => {
     if (!isClient || !difficulty || level === undefined) return;
 
-    const storageKey = `tierlist-${difficulty}-${level}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        const parsedState = JSON.parse(saved) as TierListState;
-        setTierListName(parsedState.name || "");
-      } catch {
-        // If parsing fails, just use empty name
-      }
-    }
-
-    // Track recently visited
     try {
       const recentKey = "tierlist-recently-visited";
       const recent = JSON.parse(
@@ -136,13 +354,18 @@ export function TierBoard({
     }
   }, [isClient, difficulty, level]);
 
-  // Auto-save state to localStorage whenever it changes (including name)
-  useEffect(() => {
-    if (!isClient) return;
-    const storageKey = `tierlist-${difficulty}-${level}`;
-    const stateWithName = { ...state, name: tierListName };
-    localStorage.setItem(storageKey, JSON.stringify(stateWithName));
-  }, [state, tierListName, difficulty, level, isClient]);
+  // Handle tier list name edit completion
+  const handleFinishEditingName = () => {
+    if (currentVariant && tierListName !== (currentVariant.customLabel || "")) {
+      const updated = variants.map((v) =>
+        v.id === currentVariantId
+          ? { ...v, customLabel: tierListName || undefined }
+          : v,
+      );
+      setVariants(updated);
+    }
+    setIsEditingName(false);
+  };
 
   // Reset export count when switching tiers (per-level session tracking)
   useEffect(() => {
@@ -167,13 +390,23 @@ export function TierBoard({
     }
   }, [isClient, difficulty, level]);
 
-  const handleStateChange = useCallback(
-    (newState: TierListState) => {
-      setState(newState);
-      onStateChange?.(newState);
-    },
-    [onStateChange],
-  );
+  // Close "More" menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        moreMenuRef.current &&
+        !moreMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowMoreMenu(false);
+      }
+    };
+
+    if (showMoreMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showMoreMenu]);
 
   // Handle chart click to select/move between rows
   const handleChartClickInRow = (chart: ChartRecord, rowId: string) => {
@@ -199,7 +432,7 @@ export function TierBoard({
           }
           return p;
         });
-        setState({ ...state, placements: newPlacements });
+        handleStateChange({ ...state, placements: newPlacements });
         setSelectedChartId(null);
         setSelectedChartRowId(null);
         setActiveRowId(rowId);
@@ -213,7 +446,7 @@ export function TierBoard({
           rowId: rowId,
           xValue: state.placements.filter((p) => p.rowId === rowId).length,
         });
-      setState({ ...state, placements: newPlacements });
+      handleStateChange({ ...state, placements: newPlacements });
       setSelectedChartId(null);
       setSelectedChartRowId(null);
       setActiveRowId(rowId);
@@ -237,7 +470,7 @@ export function TierBoard({
             state.placements.filter((p) => p.rowId === rowId).length -
             (selectedChartRowId === rowId ? 1 : 0),
         });
-      setState({ ...state, placements: newPlacements });
+      handleStateChange({ ...state, placements: newPlacements });
       setSelectedChartId(null);
       setSelectedChartRowId(null);
       setActiveRowId(rowId);
@@ -262,13 +495,36 @@ export function TierBoard({
   // Group unplaced charts: base charts and their plus variants together
   const groupedCharts = getGroupedCharts(unplacedCharts);
 
-  // Reset tier list
+  // Reset tier list based on current variant type
   const handleReset = () => {
-    if (confirm("Are you sure you want to reset the tier list?")) {
-      handleStateChange({
-        rows: createDefaultTiers(level),
-        placements: [],
-      });
+    if (confirm("Are you sure you want to reset this tier list?")) {
+      let newRows = [];
+      let newPlacements: Placement[] = [];
+
+      if (currentVariant?.type === "decimal") {
+        newRows = createDefaultTiers(level);
+      } else if (currentVariant?.type === "category") {
+        // Get category rows from fresh variant
+        const freshCategory = createCategoryTierListVariant();
+        newRows = freshCategory.rows;
+      } else if (currentVariant?.type === "custom") {
+        // Reset custom to one empty row
+        newRows = [
+          {
+            id: generateRowId(),
+            name: "Tier 1",
+            color: "#CCCCCC",
+          },
+        ];
+      }
+
+      // Update the current variant with reset rows
+      const updated = variants.map((v) =>
+        v.id === currentVariantId
+          ? { ...v, rows: newRows, placements: newPlacements }
+          : v,
+      );
+      setVariants(updated);
     }
   };
 
@@ -278,14 +534,6 @@ export function TierBoard({
       ...state,
       rows: state.rows.filter((r) => r.id !== rowId),
       placements: state.placements.filter((p) => p.rowId !== rowId),
-    });
-  };
-
-  // Update row
-  const handleUpdateRow = (rowId: string, updates: Partial<TierRow>) => {
-    handleStateChange({
-      ...state,
-      rows: state.rows.map((r) => (r.id === rowId ? { ...r, ...updates } : r)),
     });
   };
 
@@ -399,8 +647,8 @@ export function TierBoard({
     });
   };
 
-  // Drag over row - with auto-scroll
-  const handleRowDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  // Drag over row - with auto-scroll (for charts)
+  const handleChartDragOverRow = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
@@ -415,8 +663,11 @@ export function TierBoard({
     }
   };
 
-  // Drop on row
-  const handleRowDrop = (rowId: string, e: React.DragEvent<HTMLDivElement>) => {
+  // Drop on row (for charts)
+  const handleChartDropOnRow = (
+    rowId: string,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
     e.preventDefault();
     if (!draggedChart) return;
 
@@ -667,6 +918,60 @@ export function TierBoard({
     }
   };
 
+  // Export tier list as JSON
+  const handleExportJSON = () => {
+    try {
+      const filename = tierListName
+        ? `tierlist-${tierListName.replace(/\s+/g, "-").toLowerCase()}.json`
+        : `tierlist-${difficulty}-${level}.json`;
+      exportTierListAsJSON(state, filename);
+    } catch (error) {
+      console.error("Failed to export JSON:", error);
+      alert("Failed to export tier list. Please try again.");
+    }
+  };
+
+  // Import tier list from JSON
+  const handleImportJSON = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const importedState = await importTierListFromJSON(file);
+
+      // Confirm before overwriting
+      const confirmed = window.confirm(
+        "This will replace your current tier list. Continue?",
+      );
+
+      if (confirmed) {
+        handleStateChange(importedState);
+        // Update name if imported state has one
+        if (importedState.name) {
+          setTierListName(importedState.name);
+        }
+        alert("Tier list imported successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to import JSON:", error);
+      alert(
+        `Failed to import tier list: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    } finally {
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // Trigger file input for import
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
   // Group charts by base difficulty, with plus variants together
   function getGroupedCharts(
     chartsToGroup: ChartRecord[],
@@ -741,6 +1046,7 @@ export function TierBoard({
             {/* Tier list name editor */}
             {difficulty && level !== undefined && (
               <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-gray-500">Custom name:</span>
                 {isEditingName ? (
                   <div className="flex gap-2 items-center flex-1">
                     <input
@@ -749,11 +1055,14 @@ export function TierBoard({
                       value={tierListName}
                       onChange={(e) => setTierListName(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") setIsEditingName(false);
-                        if (e.key === "Escape") setIsEditingName(false);
+                        if (e.key === "Enter") handleFinishEditingName();
+                        if (e.key === "Escape") {
+                          setTierListName(currentVariant?.customLabel || "");
+                          setIsEditingName(false);
+                        }
                       }}
-                      onBlur={() => setIsEditingName(false)}
-                      placeholder="Tier list name (optional)"
+                      onBlur={() => handleFinishEditingName()}
+                      placeholder="e.g., 'By username' or 'Practice run'"
                       className="px-2 py-1 bg-gray-700 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none max-w-xs"
                     />
                   </div>
@@ -761,12 +1070,70 @@ export function TierBoard({
                   <button
                     onClick={() => setIsEditingName(true)}
                     className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                    title="Click to name this tier list"
                   >
                     {tierListName ? (
                       <span className="text-gray-300">{tierListName}</span>
                     ) : (
                       <span className="text-gray-500 italic">+ add name</span>
                     )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Tier List Variant Selector */}
+            {difficulty && level !== undefined && variants.length > 0 && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-500">Tier List:</span>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={currentVariantId}
+                    onChange={(e) => handleSwitchVariant(e.target.value)}
+                    className="px-2 py-1 bg-gray-700 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                  >
+                    {variants.map((v) => {
+                      const label = v.customLabel
+                        ? `${v.displayName} - ${v.customLabel}`
+                        : v.displayName;
+                      const displayLabel =
+                        v.type === "custom" ? `${label} (custom)` : label;
+                      return (
+                        <option key={v.id} value={v.id}>
+                          {displayLabel}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {/* Delete button for custom tier lists */}
+                  {currentVariant?.type === "custom" && (
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Delete "${currentVariant.customLabel ? `${currentVariant.displayName} - ${currentVariant.customLabel}` : currentVariant.displayName}"?`,
+                          )
+                        ) {
+                          handleDeleteVariant(currentVariantId);
+                        }
+                      }}
+                      className="px-2 py-1 text-xs bg-red-700 text-red-100 hover:bg-red-600 rounded border border-red-600 hover:border-red-500 transition-colors flex items-center gap-1"
+                      title="Delete this custom tier list"
+                    >
+                      <TrashIcon className="w-3 h-3" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+                {/* Create custom button */}
+                {canCreateCustom && (
+                  <button
+                    onClick={() => setShowCreateDialog(true)}
+                    className="px-2 py-1 text-xs bg-gray-700 text-gray-300 hover:text-white rounded border border-gray-600 hover:border-gray-500 transition-colors flex items-center gap-1"
+                    title="Create custom tier list"
+                  >
+                    <PlusIcon className="w-3 h-3" />
+                    Custom
                   </button>
                 )}
               </div>
@@ -824,28 +1191,79 @@ export function TierBoard({
               }
             >
               <ArrowDownTrayIcon className="w-4 h-4" />
-              {isExporting ? "Exporting..." : "Export"}
+              {isExporting ? "Exporting..." : "Export Image"}
             </button>
-            <button
-              onClick={handleToggleFavorite}
-              className={`px-4 py-2 rounded font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer ${
-                isFavorited
-                  ? "bg-yellow-500 text-gray-900 hover:bg-yellow-600"
-                  : "bg-gray-600 text-white hover:bg-gray-700"
-              }`}
-              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-            >
-              <StarIcon className="w-4 h-4" />
-              {isFavorited ? "Favorited" : "Favorite"}
-            </button>
-            <button
-              onClick={() => setShowHelpModal(true)}
-              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
-              title="Show help and instructions"
-            >
-              <QuestionMarkCircleIcon className="w-4 h-4" />
-              Help
-            </button>
+
+            {/* More menu dropdown */}
+            <div ref={moreMenuRef} className="relative">
+              <button
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+                title="More options"
+              >
+                <EllipsisVerticalIcon className="w-4 h-4" />
+              </button>
+
+              {/* Dropdown menu */}
+              {showMoreMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-max">
+                  <button
+                    onClick={() => {
+                      handleToggleFavorite();
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full px-4 py-2 text-left font-medium text-sm flex items-center gap-2 transition-colors ${
+                      isFavorited
+                        ? "bg-yellow-600 hover:bg-yellow-700 text-gray-900"
+                        : "text-white hover:bg-gray-700"
+                    }`}
+                  >
+                    <StarIcon className="w-4 h-4" />
+                    {isFavorited ? "Remove Favorite" : "Add Favorite"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportJSON();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-white font-medium text-sm flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                  >
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    Export Tier List
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleImportClick();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-white font-medium text-sm flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                  >
+                    <ArrowUpTrayIcon className="w-4 h-4" />
+                    Import Tier List
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowHelpModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-white font-medium text-sm flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                  >
+                    <QuestionMarkCircleIcon className="w-4 h-4" />
+                    Help
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Hidden file input for JSON import */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImportJSON}
+              className="hidden"
+              aria-label="Import tier list JSON file"
+            />
           </div>
 
           {/* Mobile menu button */}
@@ -917,33 +1335,68 @@ export function TierBoard({
                     : "Export as image"
               }
             >
-              <ArrowDownTrayIcon className="w-4 h-4" />
               {isExporting ? "Exporting..." : "Export as Image"}
             </button>
-            <button
-              onClick={() => {
-                handleToggleFavorite();
-                setShowHeaderMenu(false);
-              }}
-              className={`w-full px-4 py-2 rounded font-medium text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer ${
-                isFavorited
-                  ? "bg-yellow-500 hover:bg-yellow-600 text-gray-900"
-                  : "bg-gray-600 hover:bg-gray-700 text-white"
-              }`}
-            >
-              <StarIcon className="w-4 h-4" />
-              {isFavorited ? "Favorited" : "Favorite"}
-            </button>
-            <button
-              onClick={() => {
-                setShowHelpModal(true);
-                setShowHeaderMenu(false);
-              }}
-              className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <QuestionMarkCircleIcon className="w-4 h-4" />
-              Help
-            </button>
+
+            {/* Mobile More Menu */}
+            <div className="border-t border-gray-700 pt-2">
+              <button
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <EllipsisVerticalIcon className="w-4 h-4" />
+                More Options
+              </button>
+
+              {showMoreMenu && (
+                <div className="mt-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      handleToggleFavorite();
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full px-4 py-2 rounded font-medium text-sm flex items-center justify-center gap-2 ${
+                      isFavorited
+                        ? "bg-yellow-600 hover:bg-yellow-700 text-gray-900"
+                        : "bg-gray-600 hover:bg-gray-700 text-white"
+                    }`}
+                  >
+                    <StarIcon className="w-4 h-4" />
+                    {isFavorited ? "Remove Favorite" : "Add Favorite"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleExportJSON();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    Export Tier List
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleImportClick();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <ArrowUpTrayIcon className="w-4 h-4" />
+                    Import Tier List
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowHelpModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <QuestionMarkCircleIcon className="w-4 h-4" />
+                    Help
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -979,8 +1432,8 @@ export function TierBoard({
                 state.rows.map((row) => (
                   <div
                     key={row.id}
-                    onDragOver={handleRowDragOver}
-                    onDrop={(e) => handleRowDrop(row.id, e)}
+                    onDragOver={handleChartDragOverRow}
+                    onDrop={(e) => handleChartDropOnRow(row.id, e)}
                   >
                     <TierRowComponent
                       row={row}
@@ -990,6 +1443,10 @@ export function TierBoard({
                       onReorderCharts={() => {}}
                       onDeleteRow={handleRemoveRow}
                       onUpdateRow={handleUpdateRow}
+                      onAddRowAbove={() => handleAddRow("above", row.id)}
+                      onAddRowBelow={() => handleAddRow("below", row.id)}
+                      onMoveRowUp={() => handleMoveRowUp(row.id)}
+                      onMoveRowDown={() => handleMoveRowDown(row.id)}
                       onChartDragStart={handleChartDragStart}
                       onChartClick={handleChartClickInRow}
                       onMoveChartToRow={handleMoveChartToRow}
@@ -999,6 +1456,17 @@ export function TierBoard({
                       onActivate={() => setActiveRowId(row.id)}
                       onDeactivate={handleDeactivateRow}
                       onDeselect={handleDeselectChart}
+                      totalRows={state.rows.length}
+                      maxRows={MAX_ROWS}
+                      isDraggingRow={draggedRowId === row.id}
+                      isDragOverRow={dragOverRowId === row.id}
+                      dropPosition={
+                        dragOverRowId === row.id ? dropPosition : null
+                      }
+                      onRowDragStart={handleRowDragStart}
+                      onRowDragOver={handleRowDragOver}
+                      onRowDragLeave={handleRowDragLeave}
+                      onRowDrop={handleRowDrop}
                     />
                   </div>
                 ))
@@ -1078,6 +1546,53 @@ export function TierBoard({
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}
       />
+
+      {/* Create Custom Tier List Modal */}
+      {showCreateDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 rounded-lg p-6 max-w-sm w-full mx-4 border border-gray-700">
+            <h2 className="text-xl font-bold text-white mb-2">
+              Create Custom Tier List
+            </h2>
+            <p className="text-xs text-gray-400 mb-4">
+              You can create one custom tier list per difficulty level
+            </p>
+            <input
+              autoFocus
+              type="text"
+              value={customTierListName}
+              onChange={(e) => setCustomTierListName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCreateCustom();
+                if (e.key === "Escape") {
+                  setShowCreateDialog(false);
+                  setCustomTierListName("");
+                }
+              }}
+              placeholder="Enter tier list name"
+              className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 focus:border-blue-500 focus:outline-none mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowCreateDialog(false);
+                  setCustomTierListName("");
+                }}
+                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateCustom}
+                disabled={!customTierListName.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

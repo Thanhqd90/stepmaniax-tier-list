@@ -2,7 +2,13 @@
  * Utility functions for chart and tier list operations
  */
 
-import type { ChartRecord, Placement, Song, TierListState } from "@/types/smx";
+import type {
+  ChartRecord,
+  Placement,
+  Song,
+  TierListState,
+  TierListVariant,
+} from "@/types/smx";
 
 /**
  * Convert Song[] format (with nested charts) to flat ChartRecord[] format
@@ -236,4 +242,216 @@ export function getDifficultyLevelCombinations(
       if (a.level !== b.level) return a.level - b.level;
       return a.difficulty.localeCompare(b.difficulty);
     });
+}
+
+/**
+ * Export tier list state as a JSON file
+ */
+export function exportTierListAsJSON(
+  state: TierListState,
+  filename: string = "tierlist.json",
+): void {
+  const dataStr = JSON.stringify(state, null, 2);
+  const dataBlob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(dataBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Import tier list state from a JSON file
+ */
+export async function importTierListFromJSON(
+  file: File,
+): Promise<TierListState> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const state = JSON.parse(content) as TierListState;
+
+        // Validate the state has required properties
+        if (!state.rows || !Array.isArray(state.rows)) {
+          throw new Error("Invalid tier list: missing rows array");
+        }
+        if (!state.placements || !Array.isArray(state.placements)) {
+          throw new Error("Invalid tier list: missing placements array");
+        }
+
+        resolve(state);
+      } catch (error) {
+        reject(
+          error instanceof Error
+            ? error
+            : new Error("Failed to parse JSON file"),
+        );
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Failed to read file"));
+    };
+
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Generate a unique tier list variant ID
+ */
+export function generateTierListId(): string {
+  return `tierlist-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Create the "Difficulty" default tier list for a given level
+ */
+export function createDecimalTierListVariant(level: number): TierListVariant {
+  return {
+    id: "decimal",
+    type: "decimal",
+    displayName: "Difficulty",
+    editable: true,
+    rows: createDefaultTiers(level),
+    placements: [],
+  };
+}
+
+/**
+ * Create the "Skillset" category tier list for a given level
+ */
+export function createCategoryTierListVariant(): TierListVariant {
+  const categories = [
+    { name: "Stamina", color: "#FF6B6B" },
+    { name: "Footspeed", color: "#FF8A7F" },
+    { name: "Low BPM", color: "#FFA07A" },
+    { name: "Technical", color: "#FFB68F" },
+    { name: "Brackets", color: "#FFCCA3" },
+    { name: "Rhythms", color: "#FFE2B8" },
+    { name: "Twists", color: "#FFF0D0" },
+    { name: "Gimmicks", color: "#FFFDE7" },
+  ];
+
+  return {
+    id: "category",
+    type: "category",
+    displayName: "Skillset",
+    editable: true,
+    rows: categories.map((cat) => ({
+      id: generateRowId(),
+      name: cat.name,
+      color: cat.color,
+    })),
+    placements: [],
+  };
+}
+
+/**
+ * Create a blank custom tier list
+ */
+export function createCustomTierListVariant(name: string): TierListVariant {
+  return {
+    id: generateTierListId(),
+    type: "custom",
+    displayName: name,
+    editable: true,
+    rows: [
+      {
+        id: generateRowId(),
+        name: "Tier 1",
+        color: "#CCCCCC",
+      },
+    ],
+    placements: [],
+  };
+}
+
+/**
+ * Load all tier list variants for a given difficulty/level
+ */
+export function loadTierListVariants(
+  difficulty: string,
+  level: number,
+): TierListVariant[] {
+  if (typeof window === "undefined") return [];
+
+  const storageKey = `tierlists-${difficulty}-${level}`;
+  const saved = localStorage.getItem(storageKey);
+
+  if (!saved) {
+    // Return defaults if nothing saved yet
+    return [
+      createDecimalTierListVariant(level),
+      createCategoryTierListVariant(),
+    ];
+  }
+
+  try {
+    const parsed = JSON.parse(saved) as TierListVariant[];
+    // Always ensure defaults exist
+    const hasDecimal = parsed.some((v) => v.id === "decimal");
+    const hasCategory = parsed.some((v) => v.id === "category");
+
+    if (!hasDecimal) {
+      parsed.unshift(createDecimalTierListVariant(level));
+    }
+    if (!hasCategory) {
+      parsed.splice(hasDecimal ? 1 : 0, 0, createCategoryTierListVariant());
+    }
+
+    return parsed;
+  } catch {
+    return [
+      createDecimalTierListVariant(level),
+      createCategoryTierListVariant(),
+    ];
+  }
+}
+
+/**
+ * Save all tier list variants for a given difficulty/level
+ */
+export function saveTierListVariants(
+  difficulty: string,
+  level: number,
+  variants: TierListVariant[],
+): void {
+  if (typeof window === "undefined") return;
+
+  const storageKey = `tierlists-${difficulty}-${level}`;
+  localStorage.setItem(storageKey, JSON.stringify(variants));
+}
+
+/**
+ * Get the last viewed tier list variant ID for a difficulty/level
+ */
+export function getLastViewedVariantId(
+  difficulty: string,
+  level: number,
+): string | null {
+  if (typeof window === "undefined") return null;
+
+  const storageKey = `tierlist-lastviewed-${difficulty}-${level}`;
+  return localStorage.getItem(storageKey);
+}
+
+/**
+ * Save the last viewed tier list variant ID for a difficulty/level
+ */
+export function saveLastViewedVariantId(
+  difficulty: string,
+  level: number,
+  variantId: string,
+): void {
+  if (typeof window === "undefined") return;
+
+  const storageKey = `tierlist-lastviewed-${difficulty}-${level}`;
+  localStorage.setItem(storageKey, variantId);
 }

@@ -96,7 +96,120 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             )}
           </div>
 
-          {/* Moving Charts */}
+          {/* Tier List Types */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <button
+              onClick={() =>
+                setExpandedSection(expandedSection === "types" ? "" : "types")
+              }
+              className="w-full flex items-center justify-between text-left hover:text-yellow-400 transition-colors"
+            >
+              <h3 className="text-lg font-bold text-yellow-400">
+                Tier List Types
+              </h3>
+              <span className="text-gray-400">
+                {expandedSection === "types" ? "−" : "+"}
+              </span>
+            </button>
+            {expandedSection === "types" && (
+              <div className="text-gray-300 mt-3 text-sm space-y-2">
+                <p>
+                  <strong className="text-yellow-300">Difficulty:</strong>{" "}
+                  Default tier ranking system (Beginner to Challenge)
+                </p>
+                <p>
+                  <strong className="text-yellow-300">Skillset:</strong> 8
+                  categories for detailed analysis: Stamina, Footspeed, Low BPM,
+                  Technical, Brackets, Rhythms, Twists, Gimmicks
+                </p>
+                <p>
+                  <strong className="text-yellow-300">Custom:</strong> Create
+                  your own tier list with custom rows (limited to 1 per level)
+                </p>
+                <p>Switch between types using the dropdown below the title.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Managing Rows */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <button
+              onClick={() =>
+                setExpandedSection(expandedSection === "rows" ? "" : "rows")
+              }
+              className="w-full flex items-center justify-between text-left hover:text-yellow-400 transition-colors"
+            >
+              <h3 className="text-lg font-bold text-yellow-400">
+                Managing Rows
+              </h3>
+              <span className="text-gray-400">
+                {expandedSection === "rows" ? "−" : "+"}
+              </span>
+            </button>
+            {expandedSection === "rows" && (
+              <div className="text-gray-300 mt-3 text-sm space-y-2">
+                <p>
+                  Click the menu button (⋮) on any row to access all row
+                  controls:
+                </p>
+                <p className="ml-2">
+                  ✏️ <strong>Rename Row</strong> - Edit the row name
+                </p>
+                <p className="ml-2">
+                  🎨 <strong>Choose Color</strong> - Pick a custom color
+                </p>
+                <p className="ml-2">
+                  ✨ <strong>Random Color</strong> - Auto-generate a color
+                </p>
+                <p className="ml-2">
+                  ➕ <strong>Add Row Above/Below</strong> - Insert new rows
+                </p>
+                <p className="ml-2">
+                  ↕️ <strong>Move Up/Down</strong> - Reorder rows (or drag)
+                </p>
+                <p className="ml-2">
+                  🗑️ <strong>Delete Row</strong> - Remove a row
+                </p>
+                <p className="mt-2 text-yellow-200">
+                  Maximum 12 rows per tier list
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Reordering Rows */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <button
+              onClick={() =>
+                setExpandedSection(
+                  expandedSection === "reorder" ? "" : "reorder",
+                )
+              }
+              className="w-full flex items-center justify-between text-left hover:text-yellow-400 transition-colors"
+            >
+              <h3 className="text-lg font-bold text-yellow-400">
+                Drag & Drop Rows
+              </h3>
+              <span className="text-gray-400">
+                {expandedSection === "reorder" ? "−" : "+"}
+              </span>
+            </button>
+            {expandedSection === "reorder" && (
+              <div className="text-gray-300 mt-3 text-sm space-y-2">
+                <p>Drag any row to reorder your tier list:</p>
+                <p className="ml-2">• Dragging becomes semi-transparent</p>
+                <p className="ml-2">
+                  • Target row highlights with a yellow ring
+                </p>
+                <p className="ml-2">
+                  • Visual indicator shows: ↑ INSERT ABOVE or ↓ INSERT BELOW
+                </p>
+                <p className="ml-2">
+                  • Drop to move the row to the new position
+                </p>
+              </div>
+            )}
+          </div>
           <div className="bg-gray-700/50 rounded-lg p-4">
             <button
               onClick={() =>
@@ -137,12 +250,63 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </button>
             {expandedSection === "features" && (
               <div className="text-gray-300 mt-3 text-sm space-y-1">
+                <p>✓ Multiple tier list types (Difficulty, Skillset, Custom)</p>
+                <p>✓ Drag-and-drop row reordering with visual indicators</p>
+                <p>✓ Full row management (add, delete, rename, color)</p>
+                <p>✓ 12-row limit per tier list</p>
+                <p>✓ Move charts with drag-and-drop or tap</p>
                 <p>✓ Auto-save tier lists to your browser</p>
                 <p>✓ Export as high-quality PNG images</p>
+                <p>✓ Export/import tier lists as files</p>
                 <p>✓ Recently visited tracking</p>
                 <p>✓ Add favorites</p>
-                <p>✓ Move charts with drag-and-drop or tap</p>
                 <p>✓ Show/hide all charts in sidebar</p>
+                <p>✓ Custom tier list naming</p>
+              </div>
+            )}
+          </div>
+
+          {/* Import & Export */}
+          <div className="bg-gray-700/50 rounded-lg p-4">
+            <button
+              onClick={() =>
+                setExpandedSection(
+                  expandedSection === "import_export" ? "" : "import_export",
+                )
+              }
+              className="w-full flex items-center justify-between text-left hover:text-yellow-400 transition-colors"
+            >
+              <h3 className="text-lg font-bold text-yellow-400">
+                Import & Export
+              </h3>
+              <span className="text-gray-400">
+                {expandedSection === "import_export" ? "−" : "+"}
+              </span>
+            </button>
+            {expandedSection === "import_export" && (
+              <div className="text-gray-300 mt-3 text-sm space-y-2">
+                <p>
+                  <strong className="text-yellow-300">Export PNG Image:</strong>{" "}
+                  Click the "Export Image" button to download a high-quality
+                  image of your tier list. You need at least 5 charts placed to
+                  export.
+                </p>
+                <p>
+                  <strong className="text-yellow-300">Export Tier List:</strong>{" "}
+                  Use the "More" menu (⋮) to export your tier list as a file.
+                  This saves all tier rows, placements, and settings, making it
+                  easy to share or backup your data.
+                </p>
+                <p>
+                  <strong className="text-yellow-300">Import Tier List:</strong>{" "}
+                  Use the "Import Tier List" option in the "More" menu to load a
+                  previously exported tier list. Your current tier list will be
+                  replaced.
+                </p>
+                <p className="text-yellow-200 border-l-2 border-yellow-400 pl-2">
+                  💡 Use export/import to open your tier lists on different
+                  devices!
+                </p>
               </div>
             )}
           </div>
@@ -162,13 +326,36 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </button>
             {expandedSection === "tips" && (
               <div className="text-gray-300 mt-3 text-sm space-y-2">
-                <p>• Click the eye icon to hide the charts sidebar for more</p>
+                <p>
+                  • Use different tier list types for different analysis
+                  (Difficulty, Skillset, Custom)
+                </p>
+                <p>
+                  • Drag rows to quickly reorder them, or use the menu buttons
+                  for more control
+                </p>
+                <p>
+                  • Click the eye icon to hide the charts sidebar for more
+                  screen space
+                </p>
+                <p>
+                  • Use custom colors to visually organize rows by difficulty or
+                  category
+                </p>
+                <p>
+                  • Maximum 12 rows keeps tier lists organized and prevents UI
+                  clutter
+                </p>
                 <p>
                   • Use a custom name when exporting to label your tier list
                 </p>
                 <p>
-                  • Charts stay organized even after you close and reopen the
-                  page as long as you use the same browser and not in incognito
+                  • Charts stay organized across browser sessions in the same
+                  browser
+                </p>
+                <p>
+                  • Export your tier list as a file to back it up or open on a
+                  different device
                 </p>
               </div>
             )}

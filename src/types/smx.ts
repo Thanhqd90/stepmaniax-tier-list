@@ -62,6 +62,16 @@ export interface TierListState {
   name?: string; // Optional name for the tier list
 }
 
+export type TierListType = "decimal" | "category" | "custom";
+
+export interface TierListVariant extends TierListState {
+  id: string; // Unique ID for this tier list variant
+  type: TierListType; // decimal, category, or custom
+  displayName: string; // Base name (e.g., "Difficulty", "Skillset", custom name)
+  customLabel?: string; // Optional user annotation (e.g., "By username")
+  editable: boolean; // Whether rows can be edited (true for all types now)
+}
+
 export interface FilterState {
   selectedDifficulties: string[]; // e.g., ["easy", "easy+", "hard"]
   levels: number[];
