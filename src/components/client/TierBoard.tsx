@@ -620,6 +620,74 @@ export function TierBoard({
     }
   };
 
+  // Reorder/move charts within a row or between rows
+  const handleReorderCharts = ({
+    fromRowId,
+    toRowId,
+    fromIndex,
+    toIndex,
+    chartId,
+  }: {
+    fromRowId: string;
+    toRowId: string;
+    fromIndex: number;
+    toIndex: number;
+    chartId: string;
+  }) => {
+    if (fromRowId === toRowId) {
+      // Same row: reorder in place
+      const rowPlacements = state.placements
+        .filter((p) => p.rowId === fromRowId)
+        .sort((a, b) => a.xValue - b.xValue);
+
+      const withoutDragged = rowPlacements.filter((p) => p.chartId !== chartId);
+      const insertIdx =
+        toIndex === -1 || toIndex >= withoutDragged.length
+          ? withoutDragged.length
+          : toIndex;
+      withoutDragged.splice(insertIdx, 0, {
+        chartId,
+        rowId: fromRowId,
+        xValue: 0,
+      });
+      const reordered = withoutDragged.map((p, idx) => ({ ...p, xValue: idx }));
+      const others = state.placements.filter((p) => p.rowId !== fromRowId);
+      handleStateChange({ ...state, placements: [...others, ...reordered] });
+    } else {
+      // Different row: move chart across rows
+      const sourcePlacements = state.placements
+        .filter((p) => p.rowId === fromRowId && p.chartId !== chartId)
+        .sort((a, b) => a.xValue - b.xValue)
+        .map((p, idx) => ({ ...p, xValue: idx }));
+
+      const targetPlacements = state.placements
+        .filter((p) => p.rowId === toRowId)
+        .sort((a, b) => a.xValue - b.xValue);
+
+      const insertIdx =
+        toIndex === -1 || toIndex >= targetPlacements.length
+          ? targetPlacements.length
+          : toIndex;
+      targetPlacements.splice(insertIdx, 0, {
+        chartId,
+        rowId: toRowId,
+        xValue: 0,
+      });
+      const reorderedTarget = targetPlacements.map((p, idx) => ({
+        ...p,
+        xValue: idx,
+      }));
+
+      const others = state.placements.filter(
+        (p) => p.rowId !== fromRowId && p.rowId !== toRowId,
+      );
+      handleStateChange({
+        ...state,
+        placements: [...others, ...sourcePlacements, ...reorderedTarget],
+      });
+    }
+  };
+
   // Drag start
   const handleChartDragStart = (chart: ChartRecord) => {
     console.log("Chart drag start:", chart.id);
@@ -709,15 +777,16 @@ export function TierBoard({
       (p) => p.chartId !== draggedChart.id,
     );
 
-    // Calculate xValue based on drop position within the row
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const xValue = e.clientX - rect.left;
+    // Append to end of the target row
+    const maxXInRow = newPlacements
+      .filter((p) => p.rowId === rowId)
+      .reduce((max, p) => Math.max(max, p.xValue), -1);
 
-    // Add new placement
+    // Add new placement at the end
     newPlacements.push({
       chartId: draggedChart.id,
       rowId,
-      xValue,
+      xValue: maxXInRow + 1,
     });
 
     // Sort placements within each row by xValue for proper left-to-right ordering
@@ -1487,7 +1556,7 @@ export function TierBoard({
                       charts={charts}
                       placements={state.placements}
                       onRemoveChart={handleRemoveChart}
-                      onReorderCharts={() => {}}
+                      onReorderCharts={handleReorderCharts}
                       onDeleteRow={handleRemoveRow}
                       onUpdateRow={handleUpdateRow}
                       onAddRowAbove={() => handleAddRow("above", row.id)}
