@@ -550,8 +550,12 @@ export function TierRowComponent({
                     }}
                     onTouchStart={(e) => {
                       const touch = e.touches[0];
-                      e.currentTarget.dataset.touchStartX = touch.clientX;
-                      e.currentTarget.dataset.touchStartY = touch.clientY;
+                      e.currentTarget.dataset.touchStartX = String(
+                        touch.clientX,
+                      );
+                      e.currentTarget.dataset.touchStartY = String(
+                        touch.clientY,
+                      );
                       e.currentTarget.dataset.touchMoved = "false";
                     }}
                     onTouchMove={(e) => {
