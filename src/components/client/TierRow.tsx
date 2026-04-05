@@ -10,6 +10,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
   SparklesIcon,
+  Cog6ToothIcon,
 } from "@heroicons/react/24/solid";
 
 interface TierRowProps {
@@ -42,6 +43,9 @@ interface TierRowProps {
   onRowDragOver?: (rowId: string, e: React.DragEvent<HTMLDivElement>) => void;
   onRowDragLeave?: () => void;
   onRowDrop?: (rowId: string) => void;
+  onChartDragOverRow?: (e: React.DragEvent<HTMLDivElement>) => void;
+  onChartDragLeaveRow?: () => void;
+  onChartDropOnRow?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 /**
@@ -77,6 +81,9 @@ export function TierRowComponent({
   onRowDragOver,
   onRowDragLeave,
   onRowDrop,
+  onChartDragOverRow,
+  onChartDragLeaveRow,
+  onChartDropOnRow,
 }: TierRowProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(row.name);
@@ -159,11 +166,16 @@ export function TierRowComponent({
         onDragOver={(e) => {
           e.preventDefault();
           onRowDragOver?.(row.id, e);
+          onChartDragOverRow?.(e);
         }}
-        onDragLeave={() => onRowDragLeave?.()}
+        onDragLeave={() => {
+          onRowDragLeave?.();
+          onChartDragLeaveRow?.();
+        }}
         onDrop={(e) => {
           e.preventDefault();
           onRowDrop?.(row.id);
+          onChartDropOnRow?.(e);
         }}
         onClick={() => {
           // If a chart is selected, deselect it when clicking on the row
@@ -177,10 +189,11 @@ export function TierRowComponent({
             onActivate?.();
           }
         }}
-        className={`flex gap-2 md:gap-4 p-2 md:p-4 rounded-lg border-2 mb-2 md:mb-4 cursor-move transition-all relative
+        className={`flex gap-2 md:gap-4 p-3 md:p-6 rounded-lg border-2 mb-2 md:mb-4 transition-all relative
         ${isActive ? "ring-2 ring-blue-500 ring-offset-2 shadow-lg" : ""}
         ${isDraggingRow ? "opacity-50" : ""}
-        ${isDragOverRow ? "ring-2 ring-yellow-400 ring-offset-2" : ""}
+        ${isDragOverRow && dropPosition ? "ring-2 ring-yellow-400 ring-offset-2" : ""}
+        ${isDragOverRow && !dropPosition ? "ring-2 ring-blue-400 ring-offset-2" : ""}
       `}
         style={{
           borderColor: row.color,
@@ -190,8 +203,8 @@ export function TierRowComponent({
             : "slideInUp 0.3s ease-out",
         }}
       >
-        {/* Insertion line indicator */}
-        {isDragOverRow && (
+        {/* Insertion line indicator - for row-to-row drag */}
+        {isDragOverRow && dropPosition && (
           <>
             {dropPosition === "above" && (
               <div className="absolute top-0 left-0 right-0 flex items-center justify-center z-10">
@@ -213,8 +226,9 @@ export function TierRowComponent({
             )}
           </>
         )}
+
         {/* Row Number Label - Centered */}
-        <div className="flex items-center justify-center flex-shrink-0 flex-col gap-1 relative">
+        <div className="flex items-center justify-center flex-shrink-0 flex-col gap-1 relative w-24 pr-2">
           {isEditingName ? (
             <input
               autoFocus
@@ -252,6 +266,32 @@ export function TierRowComponent({
 
           {/* Row edit menu */}
           <div className="flex gap-1 items-center relative" ref={menuRef}>
+            {/* Move up arrow */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveRowUp?.(row.id);
+              }}
+              className="p-1 hover:bg-gray-700 rounded inline-flex items-center justify-center transition-colors"
+              title="Move row up"
+              disabled={!onMoveRowUp}
+            >
+              <ChevronUpIcon className="w-4 h-4 text-gray-400" />
+            </button>
+
+            {/* Move down arrow */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveRowDown?.(row.id);
+              }}
+              className="p-1 hover:bg-gray-700 rounded inline-flex items-center justify-center transition-colors"
+              title="Move row down"
+              disabled={!onMoveRowDown}
+            >
+              <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+            </button>
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -260,7 +300,7 @@ export function TierRowComponent({
               className="p-1 hover:bg-gray-700 rounded inline-flex items-center justify-center transition-colors"
               title="Row menu"
             >
-              <EllipsisVerticalIcon className="w-4 h-4 text-gray-400" />
+              <Cog6ToothIcon className="w-4 h-4 text-gray-400" />
             </button>
 
             {showMenu && (
@@ -372,31 +412,6 @@ export function TierRowComponent({
                       </div>
                     )}
 
-                    {/* Move rows section */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMoveRowUp?.(row.id);
-                        setShowMenu(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
-                    >
-                      <ChevronUpIcon className="w-3 h-3 text-blue-400" />
-                      Move Up
-                    </button>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMoveRowDown?.(row.id);
-                        setShowMenu(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border-b border-gray-700"
-                    >
-                      <ChevronDownIcon className="w-3 h-3 text-blue-400" />
-                      Move Down
-                    </button>
-
                     {/* Delete section */}
                     <button
                       onClick={(e) => {
@@ -447,12 +462,13 @@ export function TierRowComponent({
               </p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-1 md:gap-2">
+            <div className="flex flex-wrap gap-2 md:gap-3">
               {rowCharts.map((chart) => {
                 const isSelected = selectedChartId === chart.id;
                 return (
                   <div
                     key={chart.id}
+                    draggable="true"
                     className={`relative group w-16 md:w-20 cursor-pointer transition-all ${
                       isSelected ? "ring-2 ring-yellow-400" : ""
                     }`}
@@ -460,7 +476,11 @@ export function TierRowComponent({
                       e.stopPropagation();
                       onChartClick?.(chart, row.id);
                     }}
-                    onDragStart={() => onChartDragStart?.(chart)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("chartId", chart.id);
+                      onChartDragStart?.(chart);
+                    }}
                   >
                     <ChartCard chart={chart} compact={true} />
                     <button

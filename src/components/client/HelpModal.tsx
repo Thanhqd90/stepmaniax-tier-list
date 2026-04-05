@@ -148,9 +148,21 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </button>
             {expandedSection === "rows" && (
               <div className="text-gray-300 mt-3 text-sm space-y-2">
-                <p>
-                  Click the menu button (⋮) on any row to access all row
-                  controls:
+                <p>Each row has quick action buttons and a menu button (⚙️):</p>
+                <p className="ml-2">
+                  <strong>Quick Actions:</strong>
+                </p>
+                <p className="ml-2">
+                  ⬆️ <strong>Move Up</strong> - Move row up one position
+                </p>
+                <p className="ml-2">
+                  ⬇️ <strong>Move Down</strong> - Move row down one position
+                </p>
+                <p className="ml-2 text-gray-400 text-xs mt-1">
+                  or drag the entire row to reorder
+                </p>
+                <p className="ml-2 mt-2">
+                  <strong>Menu (⚙️) Options:</strong>
                 </p>
                 <p className="ml-2">
                   ✏️ <strong>Rename Row</strong> - Edit the row name
@@ -163,9 +175,6 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                 </p>
                 <p className="ml-2">
                   ➕ <strong>Add Row Above/Below</strong> - Insert new rows
-                </p>
-                <p className="ml-2">
-                  ↕️ <strong>Move Up/Down</strong> - Reorder rows (or drag)
                 </p>
                 <p className="ml-2">
                   🗑️ <strong>Delete Row</strong> - Remove a row

@@ -4,15 +4,16 @@ A modern web application for creating and ranking StepManiaX charts. Built with 
 
 ## Features
 
-- **Multiple tier list variants** - Organize with Difficulty (default tiers), Skillset (8 categories), or create Custom tier lists
-- **Drag-and-drop row reordering** - Drag rows to reorder them with visual insertion indicators (↑ INSERT ABOVE / ↓ INSERT BELOW)
-- **Row management** - Add, delete, rename rows and customize row colors with random color generator
-- **Row limit** - Maximum 12 rows per tier list prevents UI clutter
-- **Drag-and-drop chart ranking** - Easily rank charts across tier rows
-- **High-resolution PNG export** - Export tier lists as 2x resolution PNG images
-- **Custom tier list naming** - Name your tier lists for easy identification
-- **Recently visited tracking** - Quick access to your last tier lists from the homepage
-- **Local storage persistence** - Tier lists auto-save and restore on page reload
+- **All charts available at every level** – Access the full chart library across all difficulty levels
+- **Multiple tier list variants** – Organize by Difficulty (default tiers), Skillset (8 categories), or create custom tier lists
+- **Drag-and-drop row reordering** – Rearrange rows with visual insertion indicators
+- **Row management** – Add, delete, rename rows, and customize colors with a random color generator
+- **Drag-and-drop chart ranking** – Easily rank charts across tier rows
+- **High-resolution PNG export** – Export tier lists as 2× resolution images
+- **Custom tier list naming** – Name and organize your tier lists
+- **Recently visited tracking** – Quickly access your latest tier lists from the homepage
+- **Local storage persistence** – Auto-save and restore tier lists on reload
+- **Import/export support** – Share or back up your tier lists
 
 ## Setup Instructions
 
@@ -68,14 +69,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - **Difficulty** - Default tier system (default rating tiers)
    - **Skillset** - 8 categories (Stamina, Footspeed, Low BPM, Technical, Brackets, Rhythms, Twists, Gimmicks)
    - **Custom** - Create your own tier list (limited to 1 per level)
-3. **Manage Rows** - Click the menu button (⋮) on any row to:
-   - ✏️ Rename the row
-   - 🎨 Choose a custom color or random color
-   - ↑ Move row up/down
-   - ➕ Add rows above/below
-   - 🗑️ Delete rows
+3. **Manage Rows** - Each row has quick controls on the left:
+   - ⬆️ **Move Up** - Move row up one position
+   - ⬇️ **Move Down** - Move row down one position
+   - ⚙️ **Menu** - Access more options:
+     - ✏️ Rename the row
+     - 🎨 Choose a custom color or random color
+     - ➕ Add rows above/below
+     - 🗑️ Delete rows
    - Note: Maximum 12 rows per tier list
-4. **Reorder Rows** - Drag rows to reposition them. Visual indicators (↑ INSERT ABOVE / ↓ INSERT BELOW) show where they'll be placed
+4. **Reorder Rows** - Use the arrow buttons (⬆️ ⬇️) for quick movement, or drag rows to reposition. Visual indicators (↑ INSERT ABOVE / ↓ INSERT BELOW) show where they'll be placed
 5. **Drag Charts** - Drag song charts from the "Available Charts" sidebar into tier rows to rank them
 6. **Name Your Tier List** - Click "+ add name" to give your tier list a custom name
 7. **Auto-Save** - Your tier list is automatically saved to local storage

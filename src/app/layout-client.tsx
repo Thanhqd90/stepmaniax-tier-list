@@ -1,16 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { SmxNav } from "smx-tools-nav";
+import { SiteNav } from "@/components/client/SiteNav";
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isHome = pathname === "/";
-
   return (
-    <>
-      {isHome && <SmxNav />}
-      {children}
-    </>
+    <div className="flex flex-col w-full">
+      <SiteNav />
+      <div className="flex-1 w-full pt-16">{children}</div>
+    </div>
   );
 }

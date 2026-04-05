@@ -81,9 +81,13 @@ export function TierBoard({
   const [draggedFromRowId, setDraggedFromRowId] = useState<string | null>(null);
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
   const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
+  const [dragOverRowIdForChart, setDragOverRowIdForChart] = useState<
+    string | null
+  >(null);
   const [dropPosition, setDropPosition] = useState<"above" | "below" | null>(
     null,
   );
+  const [dragOverEmptySpace, setDragOverEmptySpace] = useState(false);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [showChartsSidebar, setShowChartsSidebar] = useState(true);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
@@ -264,6 +268,9 @@ export function TierBoard({
   // Row drag-and-drop handlers
   const handleRowDragStart = (rowId: string) => {
     setDraggedRowId(rowId);
+    setDraggedChart(null);
+    setDragOverRowIdForChart(null);
+    setDragOverEmptySpace(false);
   };
 
   const handleRowDragOver = (
@@ -271,13 +278,17 @@ export function TierBoard({
     e: React.DragEvent<HTMLDivElement>,
   ) => {
     e.preventDefault();
-    setDragOverRowId(rowId);
 
-    // Determine if dropping above or below based on vertical position
-    const rect = e.currentTarget.getBoundingClientRect();
-    const midpoint = rect.top + rect.height / 2;
-    const position = e.clientY < midpoint ? "above" : "below";
-    setDropPosition(position);
+    // Only set row drop position if dragging a row, not a chart
+    if (draggedRowId) {
+      setDragOverRowId(rowId);
+
+      // Determine if dropping above or below based on vertical position
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const position = e.clientY < midpoint ? "above" : "below";
+      setDropPosition(position);
+    }
   };
 
   const handleRowDragLeave = () => {
@@ -390,7 +401,7 @@ export function TierBoard({
     }
   }, [isClient, difficulty, level]);
 
-  // Close "More" menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -611,7 +622,13 @@ export function TierBoard({
 
   // Drag start
   const handleChartDragStart = (chart: ChartRecord) => {
+    console.log("Chart drag start:", chart.id);
     setDraggedChart(chart);
+    setDropPosition(null);
+    setDragOverRowId(null);
+    setDragOverRowIdForChart(null);
+    setDraggedRowId(null);
+    setDragOverEmptySpace(false);
   };
 
   // Chart click: select it or add to active row
@@ -648,9 +665,25 @@ export function TierBoard({
   };
 
   // Drag over row - with auto-scroll (for charts)
-  const handleChartDragOverRow = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleChartDragOverRow = (
+    rowId: string,
+    e: React.DragEvent<HTMLDivElement>,
+  ) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+
+    // Set that we're dragging a chart over this row
+    if (draggedChart && !draggedRowId) {
+      console.log(
+        "Chart drag over row:",
+        rowId,
+        "draggedChart:",
+        draggedChart.id,
+      );
+      setDragOverRowIdForChart(rowId);
+      setDragOverEmptySpace(true);
+      setDropPosition(null); // Explicitly clear dropPosition for chart drag
+    }
 
     // Auto-scroll near edges of viewport
     const scrollZone = 100;
@@ -700,6 +733,9 @@ export function TierBoard({
 
     setDraggedChart(null);
     setDraggedFromRowId(null);
+    setDragOverEmptySpace(false);
+    setDragOverRowIdForChart(null);
+    setDropPosition(null);
   };
 
   // Helper to load image from URL
@@ -736,12 +772,12 @@ export function TierBoard({
 
     try {
       const scale = 2; // High resolution scale (2x)
-      const padding = 40;
+      const padding = 125;
       const imageItemHeight = 100; // Height per row of images
-      const imageSize = 80;
-      const imagesPerRow = 7; // Changed to 7 per row
+      const imageSize = 64;
+      const imagesPerRow = 6; // 6 charts per row
       const gapSize = 10;
-      const labelWidth = 120;
+      const labelWidth = 110;
 
       // First pass: calculate total height needed
       let totalHeight = tierListName ? 90 : 60; // Title + subtitle if name exists
@@ -762,9 +798,11 @@ export function TierBoard({
       }
 
       const contentWidth =
+        padding +
         labelWidth +
+        40 +
         (imagesPerRow * imageSize + (imagesPerRow - 1) * gapSize) +
-        padding * 2;
+        padding;
       const contentHeight = totalHeight + padding * 2;
 
       const canvas = document.createElement("canvas");
@@ -1009,7 +1047,7 @@ export function TierBoard({
   }
 
   return (
-    <div className="h-screen bg-gray-950 flex flex-col">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
       {/* Header - Responsive */}
       <div className="bg-gray-900 border-b border-gray-800 flex-shrink-0">
         <div className="flex justify-between items-start px-4 md:px-6 py-3 md:py-4">
@@ -1032,7 +1070,7 @@ export function TierBoard({
               ) : (
                 <div>
                   <h1 className="text-xl md:text-3xl font-bold text-white">
-                    SMX Tier List
+                    SMX Tier List Maker
                   </h1>
                   {levelFilter !== undefined && (
                     <p className="text-xs md:text-lg text-gray-400 mt-0.5 md:mt-1 font-medium">
@@ -1339,7 +1377,7 @@ export function TierBoard({
             </button>
 
             {/* Mobile More Menu */}
-            <div className="border-t border-gray-700 pt-2">
+            <div ref={moreMenuRef} className="border-t border-gray-700 pt-2">
               <button
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
                 className="w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 font-medium text-sm flex items-center justify-center gap-2 cursor-pointer"
@@ -1349,7 +1387,10 @@ export function TierBoard({
               </button>
 
               {showMoreMenu && (
-                <div className="mt-2 space-y-1">
+                <div
+                  className="mt-2 space-y-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
                     onClick={() => {
                       handleToggleFavorite();
@@ -1383,6 +1424,16 @@ export function TierBoard({
                   >
                     <ArrowUpTrayIcon className="w-4 h-4" />
                     Import Tier List
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowHelpModal(true);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    <QuestionMarkCircleIcon className="w-4 h-4" />
+                    Help
                   </button>
                   <button
                     onClick={() => {
@@ -1430,11 +1481,7 @@ export function TierBoard({
                 </div>
               ) : (
                 state.rows.map((row) => (
-                  <div
-                    key={row.id}
-                    onDragOver={handleChartDragOverRow}
-                    onDrop={(e) => handleChartDropOnRow(row.id, e)}
-                  >
+                  <div key={row.id}>
                     <TierRowComponent
                       row={row}
                       charts={charts}
@@ -1459,7 +1506,10 @@ export function TierBoard({
                       totalRows={state.rows.length}
                       maxRows={MAX_ROWS}
                       isDraggingRow={draggedRowId === row.id}
-                      isDragOverRow={dragOverRowId === row.id}
+                      isDragOverRow={
+                        dragOverRowIdForChart === row.id ||
+                        (dragOverRowId === row.id && draggedRowId !== null)
+                      }
                       dropPosition={
                         dragOverRowId === row.id ? dropPosition : null
                       }
@@ -1467,6 +1517,16 @@ export function TierBoard({
                       onRowDragOver={handleRowDragOver}
                       onRowDragLeave={handleRowDragLeave}
                       onRowDrop={handleRowDrop}
+                      onChartDragOverRow={(e) =>
+                        handleChartDragOverRow(row.id, e)
+                      }
+                      onChartDragLeaveRow={() => {
+                        setDragOverEmptySpace(false);
+                        setDragOverRowId(null);
+                        setDragOverRowIdForChart(null);
+                        setDropPosition(null);
+                      }}
+                      onChartDropOnRow={(e) => handleChartDropOnRow(row.id, e)}
                     />
                   </div>
                 ))
@@ -1476,8 +1536,8 @@ export function TierBoard({
         </div>
 
         {/* Right/Bottom: collapsible charts sidebar */}
-        {showChartsSidebar && (
-          <div className="w-full lg:w-80 h-48 md:h-56 lg:h-full bg-gray-800 lg:border-l-2 border-t-2 lg:border-t-0 border-gray-700 flex flex-col flex-shrink-0 overflow-hidden">
+        {showChartsSidebar && unplacedCharts.length > 0 && (
+          <div className="fixed lg:relative bottom-0 lg:bottom-auto lg:right-auto lg:top-auto w-full lg:w-80 h-48 md:h-56 lg:h-full bg-gray-800 lg:border-l-2 border-t-2 lg:border-t-0 border-gray-700 flex flex-col flex-shrink-0 overflow-hidden z-40">
             <div className="p-2 md:p-4 border-b border-gray-700 flex-shrink-0">
               <div className="flex justify-between items-start gap-2 mb-2">
                 <div>
@@ -1507,7 +1567,7 @@ export function TierBoard({
                 </p>
               ) : (
                 <div
-                  className="grid grid-cols-5 md:grid-cols-2 gap-1 md:gap-3"
+                  className="grid grid-cols-4 md:grid-cols-3 gap-1 md:gap-2"
                   onClick={(e) => {
                     // Only deselect if clicking directly on grid (empty space)
                     if (e.target === e.currentTarget && selectedChartId) {
@@ -1519,9 +1579,14 @@ export function TierBoard({
                   {unplacedCharts.map((chart) => (
                     <div
                       key={chart.id}
-                      onDragStart={() => handleChartDragStart(chart)}
+                      draggable="true"
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("chartId", chart.id);
+                        handleChartDragStart(chart);
+                      }}
                       onClick={() => handleChartClick(chart)}
-                      className={`w-full aspect-square cursor-pointer transition-all ${
+                      className={`w-20 h-20 cursor-pointer transition-all ${
                         selectedChartId === chart.id
                           ? "ring-2 ring-yellow-400"
                           : ""

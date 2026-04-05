@@ -252,47 +252,46 @@ export default function HomeContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950">
+    <div className="min-h-screen flex flex-col bg-gray-950">
       {/* Selector Header */}
       <div className="bg-gray-900 border-b border-gray-800 p-4 md:p-6 flex-shrink-0">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-start gap-4">
-            <h1 className="text-2xl md:text-4xl font-bold text-white">
-              StepManiaX Tier
-            </h1>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                onClick={() => setShowHelpModal(true)}
-                className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
-                title="Show help and instructions"
-              >
-                <QuestionMarkCircleIcon className="w-4 h-4" />
-                Help
-              </button>
-              {dataLastUpdated && (
-                <div className="text-xs md:text-sm text-gray-400">
-                  Songs updated: {formatDate(dataLastUpdated)}
-                </div>
-              )}
-            </div>
+        <div className="flex justify-between items-start gap-4">
+          <h1 className="text-2xl md:text-4xl font-bold text-white">
+            StepManiaX Tier List Maker
+          </h1>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-medium text-sm hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+              title="Show help and instructions"
+            >
+              <QuestionMarkCircleIcon className="w-4 h-4" />
+              Help
+            </button>
+            {dataLastUpdated && (
+              <div className="text-xs md:text-sm text-gray-400">
+                Songs updated: {formatDate(dataLastUpdated)}
+              </div>
+            )}
           </div>
-          <div className="mt-4 md:mt-6"></div>
+        </div>
+        <div className="mt-4 md:mt-6"></div>
 
-          {/* Difficulty Selector */}
-          <div className="mb-4 md:mb-6">
-            <label className="block text-xs md:text-sm font-medium text-gray-200 mb-2 md:mb-3">
-              Difficulty
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {groupedDifficulties.map((difficulty) => {
-                const { bg, hover } = getDifficultyColor(difficulty);
-                return (
-                  <button
-                    key={difficulty}
-                    onClick={() => {
-                      setSelectedDifficulty(difficulty);
-                    }}
-                    className={`
+        {/* Difficulty Selector */}
+        <div className="mb-4 md:mb-6">
+          <label className="block text-xs md:text-sm font-medium text-gray-200 mb-2 md:mb-3">
+            Difficulty
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {groupedDifficulties.map((difficulty) => {
+              const { bg, hover } = getDifficultyColor(difficulty);
+              return (
+                <button
+                  key={difficulty}
+                  onClick={() => {
+                    setSelectedDifficulty(difficulty);
+                  }}
+                  className={`
                       px-3 md:px-4 py-1.5 md:py-2 rounded font-medium transition-colors text-sm md:text-base cursor-pointer
                       ${
                         selectedDifficulty === difficulty
@@ -300,122 +299,77 @@ export default function HomeContent() {
                           : "bg-gray-600 hover:bg-gray-700 text-white"
                       }
                     `}
-                  >
-                    {getDifficultyDisplayName(difficulty)}
-                  </button>
-                );
-              })}
-            </div>
+                >
+                  {getDifficultyDisplayName(difficulty)}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Level Selector */}
-          <div>
-            <label className="block text-xs md:text-sm font-medium text-gray-200 mb-2 md:mb-3">
-              Level
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {availableLevels.map((level) => {
-                // Sum counts from both base and plus variants
-                const baseCount =
-                  combos.find(
-                    (c) =>
-                      c.difficulty === selectedDifficulty && c.level === level,
-                  )?.count || 0;
-                const plusCount =
-                  combos.find(
-                    (c) =>
-                      c.difficulty === selectedDifficulty + "+" &&
-                      c.level === level,
-                  )?.count || 0;
-                const totalCount = baseCount + plusCount;
-                const { bg, hover } = getDifficultyColor(selectedDifficulty);
-                return (
-                  <button
-                    key={level}
-                    onClick={() =>
-                      handleNavigateToTier(selectedDifficulty, level)
-                    }
-                    className={`
+        {/* Level Selector */}
+        <div>
+          <label className="block text-xs md:text-sm font-medium text-gray-200 mb-2 md:mb-3">
+            Level
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {availableLevels.map((level) => {
+              // Sum counts from both base and plus variants
+              const baseCount =
+                combos.find(
+                  (c) =>
+                    c.difficulty === selectedDifficulty && c.level === level,
+                )?.count || 0;
+              const plusCount =
+                combos.find(
+                  (c) =>
+                    c.difficulty === selectedDifficulty + "+" &&
+                    c.level === level,
+                )?.count || 0;
+              const totalCount = baseCount + plusCount;
+              const { bg, hover } = getDifficultyColor(selectedDifficulty);
+              return (
+                <button
+                  key={level}
+                  onClick={() =>
+                    handleNavigateToTier(selectedDifficulty, level)
+                  }
+                  className={`
                       px-3 md:px-4 py-1.5 md:py-2 rounded font-medium transition-colors text-sm md:text-base ${bg} ${hover} text-white cursor-pointer
                     `}
-                  >
-                    {level} ({totalCount})
-                  </button>
-                );
-              })}
-            </div>
+                >
+                  {level} ({totalCount})
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Favorites Tier Lists */}
-          {favoriteTierLists.length > 0 && (
-            <div className="mt-6 md:mt-8">
-              <div className="flex justify-between items-center mb-2 md:mb-3">
-                <label className="block text-xs md:text-sm font-medium text-gray-200">
-                  ★ Favorites
-                </label>
-                <button
-                  onClick={handleClearFavorites}
-                  className="px-2 py-1 text-xs md:text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Clear all favorites"
-                >
-                  <TrashIcon className="w-3 h-3 md:w-4 md:h-4" />
-                  Clear
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {favoriteTierLists.map((item) => {
-                  const { bg, hover } = getDifficultyColor(item.difficulty);
-                  return (
-                    <div
-                      key={`${item.difficulty}-${item.level}`}
-                      className="relative group"
-                    >
-                      <Link
-                        href={`/tier/${item.difficulty}/${item.level}`}
-                        className={`px-3 md:px-4 py-1.5 md:py-2 rounded font-medium transition-colors text-sm md:text-base ${bg} ${hover} text-white cursor-pointer`}
-                      >
-                        {item.difficulty.charAt(0).toUpperCase() +
-                          item.difficulty.slice(1)}{" "}
-                        {item.level}
-                      </Link>
-                      <button
-                        onClick={() =>
-                          handleToggleFavorite(item.difficulty, item.level)
-                        }
-                        className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold cursor-pointer"
-                        title="Remove from favorites"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Favorites Tier Lists */}
+        {favoriteTierLists.length > 0 && (
+          <div className="mt-6 md:mt-8">
+            <div className="flex justify-between items-center mb-2 md:mb-3">
+              <label className="block text-xs md:text-sm font-medium text-gray-200">
+                ★ Favorites
+              </label>
+              <button
+                onClick={handleClearFavorites}
+                className="px-2 py-1 text-xs md:text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                title="Clear all favorites"
+              >
+                <TrashIcon className="w-3 h-3 md:w-4 md:h-4" />
+                Clear
+              </button>
             </div>
-          )}
-
-          {/* Recently Visited Tier Lists */}
-          {recentTierLists.length > 0 && (
-            <div className="mt-6 md:mt-8">
-              <div className="flex justify-between items-center mb-2 md:mb-3">
-                <label className="block text-xs md:text-sm font-medium text-gray-200">
-                  Recently Visited
-                </label>
-                <button
-                  onClick={handleClearRecent}
-                  className="px-2 py-1 text-xs md:text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Clear recently visited"
-                >
-                  <TrashIcon className="w-3 h-3 md:w-4 md:h-4" />
-                  Clear
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recentTierLists.map((item) => {
-                  const { bg, hover } = getDifficultyColor(item.difficulty);
-                  return (
+            <div className="flex flex-wrap gap-2">
+              {favoriteTierLists.map((item) => {
+                const { bg, hover } = getDifficultyColor(item.difficulty);
+                return (
+                  <div
+                    key={`${item.difficulty}-${item.level}`}
+                    className="relative group"
+                  >
                     <Link
-                      key={`${item.difficulty}-${item.level}`}
                       href={`/tier/${item.difficulty}/${item.level}`}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded font-medium transition-colors text-sm md:text-base ${bg} ${hover} text-white cursor-pointer`}
                     >
@@ -423,12 +377,56 @@ export default function HomeContent() {
                         item.difficulty.slice(1)}{" "}
                       {item.level}
                     </Link>
-                  );
-                })}
-              </div>
+                    <button
+                      onClick={() =>
+                        handleToggleFavorite(item.difficulty, item.level)
+                      }
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold cursor-pointer"
+                      title="Remove from favorites"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Recently Visited Tier Lists */}
+        {recentTierLists.length > 0 && (
+          <div className="mt-6 md:mt-8">
+            <div className="flex justify-between items-center mb-2 md:mb-3">
+              <label className="block text-xs md:text-sm font-medium text-gray-200">
+                Recently Visited
+              </label>
+              <button
+                onClick={handleClearRecent}
+                className="px-2 py-1 text-xs md:text-sm text-red-400 hover:text-red-300 hover:bg-red-950/30 rounded transition-colors flex items-center gap-1 cursor-pointer"
+                title="Clear recently visited"
+              >
+                <TrashIcon className="w-3 h-3 md:w-4 md:h-4" />
+                Clear
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recentTierLists.map((item) => {
+                const { bg, hover } = getDifficultyColor(item.difficulty);
+                return (
+                  <Link
+                    key={`${item.difficulty}-${item.level}`}
+                    href={`/tier/${item.difficulty}/${item.level}`}
+                    className={`px-3 md:px-4 py-1.5 md:py-2 rounded font-medium transition-colors text-sm md:text-base ${bg} ${hover} text-white cursor-pointer`}
+                  >
+                    {item.difficulty.charAt(0).toUpperCase() +
+                      item.difficulty.slice(1)}{" "}
+                    {item.level}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Help Modal */}

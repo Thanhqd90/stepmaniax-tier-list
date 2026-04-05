@@ -1,4 +1,4 @@
-# StepManiaX Tier List Maker - Quick Start Guide
+# StepManiaX Tierlist Maker - Quick Start Guide
 
 ## ✅ Project Created!
 
@@ -36,7 +36,7 @@ stepmaniax-tier-list/
 │   │   ├── hooks.ts     (React hooks for state)
 │   │   └── utils.ts     (Utility functions)
 │   ├── types/
-│   │   └── smx.ts       (TypeScript type definitions)
+│   │   └── smx.ts       (TypeScript type definitions)public\images\assets\starspublic\images\assets\stars
 ├── scripts/
 │   └── transform-smx.ts (Data transformation script)
 ├── public/

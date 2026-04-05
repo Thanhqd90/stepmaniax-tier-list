@@ -31,27 +31,29 @@ export function ChartCard({
   // Compact mode: just jacket art
   if (compact) {
     return (
-      <div
-        draggable
-        onDragStart={onDragStart}
-        onClick={onClick}
-        className={`
-          relative rounded-lg overflow-hidden cursor-pointer
-          transition-all duration-200 aspect-square
-          ${isDragging ? "opacity-50" : "opacity-100"}
-          ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : "ring-1 ring-gray-300"}
-          hover:ring-2 hover:ring-blue-400 hover:shadow-lg
-          bg-gray-200 shadow-md
-        `}
-        title={chart.title}
-      >
-        <Image
-          src={chart.jacketUrl}
-          alt={chart.title}
-          fill
-          className="object-cover"
-          sizes="100px"
-        />
+      <div className="relative aspect-square">
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onClick={onClick}
+          className={`
+            relative rounded-lg overflow-hidden cursor-pointer
+            transition-all duration-200 w-full h-full
+            ${isDragging ? "opacity-50" : "opacity-100"}
+            ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : "ring-1 ring-gray-300"}
+            hover:ring-2 hover:ring-blue-400 hover:shadow-lg
+            bg-gray-200 shadow-md
+          `}
+          title={chart.title}
+        >
+          <Image
+            src={chart.jacketUrl}
+            alt={chart.title}
+            fill
+            className="object-cover"
+            sizes="100px"
+          />
+        </div>
       </div>
     );
   }
