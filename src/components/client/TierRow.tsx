@@ -96,8 +96,16 @@ export function TierRowComponent({
   const [showMenu, setShowMenu] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [dragOverChartIdx, setDragOverChartIdx] = useState<number | null>(null);
-  const [dragSide, setDragSide] = useState<"left" | "right" | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragOverIdxRef = useRef<number | null>(null);
+  const dragLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const updateDragOverIdx = (idx: number | null) => {
+    if (dragOverIdxRef.current !== idx) {
+      dragOverIdxRef.current = idx;
+      setDragOverIdx(idx);
+    }
+  };
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Check if we can add more rows
@@ -177,35 +185,62 @@ export function TierRowComponent({
         }}
         onDragOver={(e) => {
           e.preventDefault();
-          const isChart = e.dataTransfer.types.includes("chartid");
-          if (isChart) {
-            onChartDragOverRow?.(e);
+          if (!e.dataTransfer.types.includes("chartid")) return;
+          if (dragLeaveTimer.current) {
+            clearTimeout(dragLeaveTimer.current);
+            dragLeaveTimer.current = null;
+          }
+          const chartDiv = (e.target as Element).closest("[data-chart-idx]");
+          if (chartDiv) {
+            const idx = parseInt(
+              chartDiv.getAttribute("data-chart-idx") || "0",
+              10,
+            );
+            const rect = chartDiv.getBoundingClientRect();
+            const insertIdx =
+              e.clientX < rect.left + rect.width / 2 ? idx : idx + 1;
+            updateDragOverIdx(insertIdx);
           } else {
-            onRowDragOver?.(row.id, e);
+            updateDragOverIdx(rowCharts.length);
           }
         }}
         onDragLeave={() => {
-          onRowDragLeave?.();
-          onChartDragLeaveRow?.();
+          dragLeaveTimer.current = setTimeout(() => {
+            updateDragOverIdx(null);
+          }, 50);
         }}
         onDrop={(e) => {
           e.preventDefault();
+          if (dragLeaveTimer.current) {
+            clearTimeout(dragLeaveTimer.current);
+            dragLeaveTimer.current = null;
+          }
           const isChart = e.dataTransfer.types.includes("chartid");
           if (isChart) {
-            onChartDropOnRow?.(e);
+            const fromRowId = e.dataTransfer.getData("fromRowId");
+            const fromIndex = parseInt(e.dataTransfer.getData("fromIndex"), 10);
+            const chartId = e.dataTransfer.getData("chartId");
+            const toIndex = dragOverIdxRef.current ?? rowCharts.length;
+            if (chartId && onReorderCharts) {
+              onReorderCharts({
+                fromRowId,
+                toRowId: row.id,
+                fromIndex,
+                toIndex,
+                chartId,
+              });
+            }
+            updateDragOverIdx(null);
           } else {
             onRowDrop?.(row.id);
           }
         }}
         onClick={() => {
-          // If a chart is selected, deselect it when clicking on the row
           if (selectedChartId) {
             onDeselect?.();
           } else if (isActive) {
-            // If row is already active, deactivate it
             onDeactivate?.();
           } else {
-            // Otherwise activate the row
             onActivate?.();
           }
         }}
@@ -286,7 +321,6 @@ export function TierRowComponent({
 
           {/* Row edit menu */}
           <div className="flex gap-1 items-center relative" ref={menuRef}>
-            {/* Move up arrow */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -299,7 +333,6 @@ export function TierRowComponent({
               <ChevronUpIcon className="w-4 h-4 text-gray-400" />
             </button>
 
-            {/* Move down arrow */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -325,7 +358,6 @@ export function TierRowComponent({
 
             {showMenu && (
               <div className="absolute left-0 top-full mt-1 z-50 bg-gray-800 border border-gray-600 rounded shadow-lg min-w-max">
-                {/* Color picker */}
                 {showColorPicker ? (
                   <>
                     <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-700">
@@ -354,7 +386,6 @@ export function TierRowComponent({
                   </>
                 ) : (
                   <>
-                    {/* Rename option */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -368,7 +399,6 @@ export function TierRowComponent({
                       Rename Row
                     </button>
 
-                    {/* Color section */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -396,7 +426,6 @@ export function TierRowComponent({
                       Random Color
                     </button>
 
-                    {/* Add rows section */}
                     {canAddRow && (
                       <>
                         <button
@@ -425,20 +454,17 @@ export function TierRowComponent({
                       </>
                     )}
 
-                    {/* Max rows warning */}
                     {!canAddRow && (
                       <div className="w-full px-3 py-2 text-xs text-red-400 bg-red-950 bg-opacity-40 border-b border-red-900 flex items-center gap-2">
                         ⚠️ Maximum {maxRows} rows reached
                       </div>
                     )}
 
-                    {/* Delete section */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         if (window.confirm(`Delete "${row.name}" row?`)) {
                           setIsDeleting(true);
-                          // Wait for animation to complete before actually deleting
                           setTimeout(() => {
                             onDeleteRow(row.id);
                           }, 300);
@@ -464,10 +490,8 @@ export function TierRowComponent({
             if (selectedChartId) {
               e.stopPropagation();
               if (selectedChartRowId === row.id) {
-                // Deselect if clicking empty space in same row as selected chart
                 onDeselect?.();
               } else {
-                // Move to different row
                 onMoveChartToRow?.(row.id);
               }
             }
@@ -483,169 +507,63 @@ export function TierRowComponent({
             </div>
           ) : (
             <div className="flex flex-wrap gap-2 md:gap-3">
-              {rowCharts.map((chart, chartIdx) => {
-                const isSelected = selectedChartId === chart.id;
-                return (
-                  <div
-                    key={chart.id}
-                    draggable
-                    className={`relative group w-16 md:w-20 cursor-pointer transition-all ${isSelected ? "ring-2 ring-yellow-400" : ""}${dragOverChartIdx === chartIdx ? " opacity-60" : ""}`}
-                    style={{ touchAction: "none" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onChartClick?.(chart, row.id);
-                    }}
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-                      e.dataTransfer.effectAllowed = "move";
-                      e.dataTransfer.setData("chartId", chart.id);
-                      e.dataTransfer.setData("fromRowId", row.id);
-                      e.dataTransfer.setData("fromIndex", String(chartIdx));
-                      onChartDragStart?.(chart);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.dataTransfer.dropEffect = "move";
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const side =
-                        e.clientX < rect.left + rect.width / 2
-                          ? "left"
-                          : "right";
-                      setDragOverChartIdx(chartIdx);
-                      setDragSide(side);
-                    }}
-                    onDragLeave={(e) => {
-                      e.stopPropagation();
-                      setDragOverChartIdx(null);
-                      setDragSide(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setDragOverChartIdx(null);
-                      setDragSide(null);
-                      const fromRowId = e.dataTransfer.getData("fromRowId");
-                      const fromIndex = parseInt(
-                        e.dataTransfer.getData("fromIndex"),
-                        10,
-                      );
-                      const chartId = e.dataTransfer.getData("chartId");
-                      if (chartId && onReorderCharts) {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const side =
-                          e.clientX < rect.left + rect.width / 2
-                            ? "left"
-                            : "right";
-                        const insertIndex =
-                          side === "right" ? chartIdx + 1 : chartIdx;
-                        onReorderCharts({
-                          fromRowId,
-                          toRowId: row.id,
-                          fromIndex,
-                          toIndex: insertIndex,
-                          chartId,
-                        });
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      const touch = e.touches[0];
-                      e.currentTarget.dataset.touchStartX = String(
-                        touch.clientX,
-                      );
-                      e.currentTarget.dataset.touchStartY = String(
-                        touch.clientY,
-                      );
-                      e.currentTarget.dataset.touchMoved = "false";
-                    }}
-                    onTouchMove={(e) => {
-                      const touch = e.touches[0];
-                      const startX = parseFloat(
-                        e.currentTarget.dataset.touchStartX || "0",
-                      );
-                      const startY = parseFloat(
-                        e.currentTarget.dataset.touchStartY || "0",
-                      );
-                      const dx = touch.clientX - startX;
-                      const dy = touch.clientY - startY;
-                      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                        e.currentTarget.dataset.touchMoved = "true";
-                        e.currentTarget.style.transform = `translate(${dx}px, ${dy}px)`;
-                        e.currentTarget.style.opacity = "0.6";
-                        e.currentTarget.style.zIndex = "1000";
-                        e.currentTarget.style.position = "relative";
-                      }
-                    }}
-                    onTouchEnd={(e) => {
-                      if (e.currentTarget.dataset.touchMoved !== "true") return;
-                      e.currentTarget.style.transform = "";
-                      e.currentTarget.style.opacity = "";
-                      e.currentTarget.style.zIndex = "";
-                      e.currentTarget.style.position = "";
-                      const touch = e.changedTouches[0];
-                      const target = document.elementFromPoint(
-                        touch.clientX,
-                        touch.clientY,
-                      );
-                      let dropRowId = row.id;
-                      let dropIndex = chartIdx;
-                      if (target) {
-                        const dropChart = target.closest("[data-chart-id]");
-                        if (dropChart && dropChart !== e.currentTarget) {
-                          dropRowId =
-                            dropChart.getAttribute("data-row-id") || row.id;
-                          dropIndex = parseInt(
-                            dropChart.getAttribute("data-chart-idx") ||
-                              String(chartIdx),
-                            10,
-                          );
-                        } else {
-                          const dropRow = target.closest("[data-row-id]");
-                          if (dropRow) {
-                            dropRowId =
-                              dropRow.getAttribute("data-row-id") || row.id;
-                            dropIndex = -1; // drop at end
-                          }
-                        }
-                      }
-                      if (onReorderCharts) {
-                        onReorderCharts({
-                          fromRowId: row.id,
-                          toRowId: dropRowId,
-                          fromIndex: chartIdx,
-                          toIndex: dropIndex,
-                          chartId: chart.id,
-                        });
-                      }
-                    }}
-                    data-chart-id={chart.id}
-                    data-row-id={row.id}
-                    data-chart-idx={chartIdx}
-                  >
-                    {dragOverChartIdx === chartIdx && dragSide === "left" && (
-                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 z-20 rounded" />
-                    )}
-                    {dragOverChartIdx === chartIdx && dragSide === "right" && (
-                      <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-blue-400 z-20 rounded" />
-                    )}
-                    <ChartCard chart={chart} compact={true} />
-                    <button
+              {(() => {
+                const items: React.ReactNode[] = [];
+                rowCharts.forEach((chart, chartIdx) => {
+                  if (dragOverIdx === chartIdx) {
+                    items.push(
+                      <div
+                        key={`__line__${chartIdx}`}
+                        className="w-0.5 self-stretch min-h-[64px] md:min-h-[80px] bg-blue-400 rounded-full pointer-events-none"
+                      />,
+                    );
+                  }
+                  const isSelected = selectedChartId === chart.id;
+                  items.push(
+                    <div
+                      key={chart.id}
+                      draggable
+                      className={`relative group w-16 md:w-20 cursor-pointer transition-all ${isSelected ? "ring-2 ring-yellow-400" : ""}`}
+                      style={{ touchAction: "none" }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onRemoveChart(chart.id);
+                        onChartClick?.(chart, row.id);
                       }}
-                      className="
-                      absolute top-0.5 md:top-1 right-0.5 md:right-1 bg-red-500 text-white
-                      rounded-full w-5 md:w-6 h-5 md:h-6 flex items-center justify-center
-                      opacity-0 group-hover:opacity-100 transition-opacity
-                      text-xs font-bold hover:bg-red-600 z-10
-                    "
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("chartId", chart.id);
+                        e.dataTransfer.setData("fromRowId", row.id);
+                        e.dataTransfer.setData("fromIndex", String(chartIdx));
+                        onChartDragStart?.(chart);
+                      }}
+                      data-chart-id={chart.id}
+                      data-row-id={row.id}
+                      data-chart-idx={chartIdx}
                     >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
+                      <ChartCard chart={chart} compact={true} />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveChart(chart.id);
+                        }}
+                        className="absolute top-0.5 md:top-1 right-0.5 md:right-1 bg-red-500 text-white rounded-full w-5 md:w-6 h-5 md:h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold hover:bg-red-600 z-10"
+                      >
+                        ×
+                      </button>
+                    </div>,
+                  );
+                });
+                if (dragOverIdx === rowCharts.length) {
+                  items.push(
+                    <div
+                      key="__line__end"
+                      className="w-0.5 self-stretch min-h-[64px] md:min-h-[80px] bg-blue-400 rounded-full pointer-events-none"
+                    />,
+                  );
+                }
+                return items;
+              })()}
             </div>
           )}
         </div>
