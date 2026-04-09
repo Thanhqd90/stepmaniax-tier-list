@@ -547,7 +547,11 @@ export function TierRowComponent({
                           e.stopPropagation();
                           onRemoveChart(chart.id);
                         }}
-                        className="absolute top-0.5 md:top-1 right-0.5 md:right-1 bg-red-500 text-white rounded-full w-5 md:w-6 h-5 md:h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold hover:bg-red-600 z-10"
+                        className={`absolute top-0.5 md:top-1 right-0.5 md:right-1 bg-red-500 text-white rounded-full w-5 md:w-6 h-5 md:h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity text-xs font-bold hover:bg-red-600 z-10 ${
+                          isSelected
+                            ? "opacity-100"
+                            : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                        }`}
                       >
                         ×
                       </button>

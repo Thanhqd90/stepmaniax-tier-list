@@ -49,9 +49,9 @@ export function ChartCard({
           <Image
             src={chart.jacketUrl}
             alt={chart.title}
-            fill
-            className="object-cover"
-            sizes="100px"
+            width={100}
+            height={100}
+            className="object-cover w-full h-auto"
           />
         </div>
       </div>

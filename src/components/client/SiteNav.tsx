@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
@@ -17,8 +16,6 @@ interface NavItem {
 }
 
 export function SiteNav() {
-  const pathname =
-    typeof window !== "undefined" ? window.location.pathname : "/";
   const [isOpen, setIsOpen] = useState(false);
   const [siteItems, setSiteItems] = useState<NavItem[]>([]);
   const [otherItems, setOtherItems] = useState<NavItem[]>([]);
@@ -84,17 +81,10 @@ export function SiteNav() {
     return item.href || item.url || item.link || "#";
   };
 
-  // Show nav on mobile only on homepage
-  const showOnMobile = pathname === "/";
   return (
     <>
-      {/* Header - hidden on mobile except homepage */}
-      <div
-        className={
-          `fixed top-0 left-0 right-0 bg-gray-900 border-b border-gray-800 z-50 h-16 items-center px-4 shadow-lg ` +
-          (showOnMobile ? "flex" : "hidden md:flex")
-        }
-      >
+      {/* Header */}
+      <div className="hidden md:flex fixed top-0 left-0 right-0 bg-gray-900 border-b border-gray-800 z-50 h-16 flex items-center px-4 shadow-lg">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 hover:bg-gray-800 rounded transition-colors"
