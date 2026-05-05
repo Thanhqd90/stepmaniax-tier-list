@@ -29477,5 +29477,401 @@
         "level": 22
       }
     ]
+  },
+  {
+    "id": "738",
+    "title": "Love Goes On",
+    "artist": "JMCX",
+    "jacketUrl": "/images/jackets/smx/LoveGoesOn.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "144",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 1
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 5
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 12
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 10
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 16
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 19
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 20
+      }
+    ]
+  },
+  {
+    "id": "739",
+    "title": "Nocturne",
+    "artist": "Hyper Potions & MDK",
+    "jacketUrl": "/images/jackets/smx/Nocturne.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "174",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 3
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 22
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 12
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 11
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 17
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 21
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 20
+      }
+    ]
+  },
+  {
+    "id": "740",
+    "title": "Samurai Heart",
+    "artist": "Quiqman feat. AKANE",
+    "jacketUrl": "/images/jackets/smx/SamuraiHeart.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "154",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 2
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 5
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 24
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 17
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 20
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 10
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 19
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 21
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 24
+      }
+    ]
+  },
+  {
+    "id": "741",
+    "title": "Hyper Rave",
+    "artist": "NAOKI",
+    "jacketUrl": "/images/jackets/smx/HyperRave.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "175",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 2
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 22
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 13
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 23
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 11
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 18
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 21
+      }
+    ]
+  },
+  {
+    "id": "742",
+    "title": "Nyaw",
+    "artist": "PaperKitty",
+    "jacketUrl": "/images/jackets/smx/Nyaw.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "180",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 4
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 7
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 16
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 25
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 18
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 23
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 12
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 21
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 25
+      }
+    ]
+  },
+  {
+    "id": "743",
+    "title": "Tribal Style",
+    "artist": "KaW",
+    "jacketUrl": "/images/jackets/smx/TribalStyle.jpg",
+    "modeGroup": "singles",
+    "bpmDisplay": "138",
+    "tags": [],
+    "charts": [
+      {
+        "chartType": "beginner",
+        "isPlus": false,
+        "level": 1
+      },
+      {
+        "chartType": "easy",
+        "isPlus": false,
+        "level": 6
+      },
+      {
+        "chartType": "hard",
+        "isPlus": false,
+        "level": 15
+      },
+      {
+        "chartType": "wild",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "dual",
+        "isPlus": false,
+        "level": 14
+      },
+      {
+        "chartType": "full",
+        "isPlus": false,
+        "level": 17
+      },
+      {
+        "chartType": "team",
+        "isPlus": false,
+        "level": 21
+      },
+      {
+        "chartType": "easy",
+        "isPlus": true,
+        "level": 11
+      },
+      {
+        "chartType": "hard",
+        "isPlus": true,
+        "level": 17
+      },
+      {
+        "chartType": "dual",
+        "isPlus": true,
+        "level": 20
+      },
+      {
+        "chartType": "full",
+        "isPlus": true,
+        "level": 23
+      }
+    ]
   }
 ]
